@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { listPatients, type MapDraft, type Patient } from "../../shared/api/httpClient";
+import { formatMapStatus } from "./mapStatus";
 
 type Props = {
   map?: MapDraft | null;
@@ -63,10 +64,10 @@ export function MapForm({ map, onSubmit, onCancel }: Props) {
         <label className="text-sm font-medium text-slate-700">
           Status
           <select className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="draft">draft</option>
-            <option value="ready_for_analysis">ready_for_analysis</option>
-            <option value="analyzed">analyzed</option>
-            <option value="archived">archived</option>
+            <option value="draft">{formatMapStatus("draft")}</option>
+            <option value="ready_for_analysis">{formatMapStatus("ready_for_analysis")}</option>
+            <option value="analyzed">{formatMapStatus("analyzed")}</option>
+            <option value="archived">{formatMapStatus("archived")}</option>
           </select>
         </label>
       </div>

@@ -9,6 +9,7 @@ import {
 } from "../../shared/api/httpClient";
 import { MapDetails } from "./MapDetails";
 import { MapForm } from "./MapForm";
+import { formatMapStatus } from "./mapStatus";
 
 export function MapList() {
   const [maps, setMaps] = useState<MapDraft[]>([]);
@@ -92,10 +93,10 @@ export function MapList() {
         <input className="flex-1 rounded-md border border-slate-300 px-3 py-2" placeholder="Buscar por título" value={query} onChange={(event) => setQuery(event.target.value)} />
         <select className="rounded-md border border-slate-300 px-3 py-2" value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="">Todos os status</option>
-          <option value="draft">draft</option>
-          <option value="ready_for_analysis">ready_for_analysis</option>
-          <option value="analyzed">analyzed</option>
-          <option value="archived">archived</option>
+          <option value="draft">{formatMapStatus("draft")}</option>
+          <option value="ready_for_analysis">{formatMapStatus("ready_for_analysis")}</option>
+          <option value="analyzed">{formatMapStatus("analyzed")}</option>
+          <option value="archived">{formatMapStatus("archived")}</option>
         </select>
         <button className="rounded-md border border-slate-300 px-4 py-2" onClick={load} type="button">Filtrar</button>
         <button className="rounded-md bg-brand-600 px-4 py-2 font-medium text-white" onClick={() => { setEditing(null); setShowForm(true); }} type="button">Novo mapa</button>
@@ -109,7 +110,7 @@ export function MapList() {
           <div className="flex flex-col gap-3 border-b border-slate-100 p-4 last:border-0 lg:flex-row lg:items-center lg:justify-between" key={map.id}>
             <div>
               <p className="font-medium text-slate-950">{map.title}</p>
-              <p className="text-sm text-slate-500">{map.patient_name ?? "Sem paciente"} · {map.status}</p>
+              <p className="text-sm text-slate-500">{map.patient_name ?? "Sem paciente"} · {formatMapStatus(map.status)}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button className="rounded-md border border-slate-300 px-3 py-1 text-sm" onClick={() => void handleDetails(map)} type="button">Detalhes</button>
