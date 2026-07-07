@@ -24,6 +24,11 @@ export function RegisterPage({ onBackToLogin }: Props) {
       return;
     }
 
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+      setError("A senha precisa ter pelo menos 8 caracteres, incluindo letras e numeros.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -83,6 +88,7 @@ export function RegisterPage({ onBackToLogin }: Props) {
             required
           />
         </label>
+        <p className="text-sm text-slate-500">A senha precisa ter pelo menos 8 caracteres, incluindo letras e numeros.</p>
         <p className="text-sm text-slate-500">Perfil inicial: profissional.</p>
         {message ? <p className="text-sm text-brand-700">{message}</p> : null}
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
