@@ -2,6 +2,14 @@ Options -Indexes
 
 RewriteEngine On
 
+# Never expose repository, workflow, env or hidden operational files.
+RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
+
+# Prevent direct web access to backend internals and source-only folders.
+RewriteRule ^backend/(src|migrations|storage)(/|$) - [F,L,NC]
+RewriteRule ^backend/(\.env|\.env\..*|composer\.(json|lock))$ - [F,L,NC]
+RewriteRule ^frontend(/|$) - [F,L,NC]
+
 RewriteRule ^api($|/) - [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
