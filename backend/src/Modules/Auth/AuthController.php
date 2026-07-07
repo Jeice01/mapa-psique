@@ -58,6 +58,30 @@ final class AuthController
         }
     }
 
+    public function forgotPassword(): JsonResponse
+    {
+        if (!Csrf::validate(Csrf::tokenFromRequest())) {
+            return JsonResponse::error('Invalid CSRF token', 419);
+        }
+
+        return JsonResponse::ok($this->service->requestPasswordReset($this->jsonBody()));
+    }
+
+    public function resetPassword(): JsonResponse
+    {
+        if (!Csrf::validate(Csrf::tokenFromRequest())) {
+            return JsonResponse::error('Invalid CSRF token', 419);
+        }
+
+        try {
+            return JsonResponse::ok($this->service->resetPassword($this->jsonBody()));
+        } catch (InvalidArgumentException $exception) {
+            return JsonResponse::error($exception->getMessage(), 400);
+        } catch (Throwable) {
+            return JsonResponse::error('Could not reset password', 400);
+        }
+    }
+
     public function logout(): JsonResponse
     {
         if (!Csrf::validate(Csrf::tokenFromRequest())) {

@@ -99,6 +99,24 @@ final class UserRepository
         return $statement->rowCount() > 0;
     }
 
+    public function updatePasswordHash(string $id, string $passwordHash): bool
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE users
+             SET password_hash = :password_hash,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id
+               AND deleted_at IS NULL'
+        );
+
+        $statement->execute([
+            'id' => $id,
+            'password_hash' => $passwordHash,
+        ]);
+
+        return $statement->rowCount() > 0;
+    }
+
     private static function normalizeEmail(string $email): string
     {
         return strtolower(trim($email));

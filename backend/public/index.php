@@ -34,6 +34,8 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $sensitiveRoutes = [
     'POST /api/auth/login',
     'POST /api/auth/register',
+    'POST /api/auth/forgot-password',
+    'POST /api/auth/reset-password',
     'POST /api/consents/accept',
 ];
 
@@ -50,6 +52,8 @@ $router->get('/api/db-check', [DbCheckController::class, 'show']);
 $router->get('/api/csrf-token', [AuthController::class, 'csrfToken']);
 $router->post('/api/auth/register', [AuthController::class, 'register']);
 $router->post('/api/auth/login', [AuthController::class, 'login']);
+$router->post('/api/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+$router->post('/api/auth/reset-password', [AuthController::class, 'resetPassword']);
 $router->post('/api/auth/logout', [AuthController::class, 'logout']);
 $router->get('/api/auth/me', [AuthController::class, 'me']);
 $router->get('/api/consents/active', [ConsentController::class, 'active']);
