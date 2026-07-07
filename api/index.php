@@ -1,3 +1,3 @@
 <?php
 
-require __DIR__ . '/../backend/public/index.php';
+require __DIR__ . '/_app/public/index.php';
