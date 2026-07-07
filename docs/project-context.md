@@ -3,6 +3,12 @@
 Este arquivo resume o estado atual, a arquitetura e o fluxo de deploy do projeto.
 Ao abrir um novo chat, peça para ler este arquivo antes de propor mudanças.
 
+Historico tecnico validado:
+
+```text
+docs/checkpoints.md
+```
+
 ## Projeto
 
 Nome: Gerador do Mapa da Psique.
@@ -54,6 +60,18 @@ Nao usar:
 
 A branch `deploy` contem os artefatos prontos para publicacao, incluindo `index.html`, `assets/` e backend PHP necessario para producao.
 
+No webroot publico de producao, o pacote runtime deve manter apenas:
+
+```text
+api/
+assets/
+.htaccess
+index.html
+.git
+```
+
+Observacao: `.git` permanece no servidor porque o deploy atual usa `git pull origin deploy`. O acesso HTTP a `.git` deve permanecer bloqueado por `.htaccess`.
+
 ## Deploy
 
 O deploy automatico esta configurado com GitHub Actions em:
@@ -102,7 +120,7 @@ Nunca registrar a chave privada no repositorio, README, docs, logs ou chat.
 O arquivo `.env` real da Hostinger deve ficar no servidor, fora do Git:
 
 ```text
-/home/u754689460/domains/mapapsique.orbisconect.com/public_html/backend/.env
+/home/u754689460/domains/mapapsique.orbisconect.com/public_html/api/_app/.env
 ```
 
 O repositorio deve manter apenas:
@@ -152,11 +170,21 @@ Validado em producao:
 - `/api/health` funciona
 - `/api/db-check` funciona
 - `/api/csrf-token` funciona
+- `/api/auth/me` funciona
+- `/api/patients` funciona
+- `/api/maps` funciona
 - Banco conectado
 - Tabelas existem
 - Cadastro/login com sessao por cookie
+- Criacao real de paciente
+- Criacao real de mapa
 - Fluxo de esqueci senha com token por e-mail
 - Deploy automatico via GitHub Actions e SSH
+- Webroot publico protegido
+
+Pendencia conhecida:
+
+- `/api/dashboard` retorna 404; verificar registro da rota futuramente.
 
 Ainda nao implementado:
 
@@ -171,5 +199,5 @@ Ainda nao implementado:
 Mensagem recomendada ao iniciar uma nova conversa:
 
 ```text
-Leia docs/project-context.md, README.md, docs/architecture.md, docs/security-baseline.md e docs/deployment-hostinger.md antes de alterar qualquer coisa. Respeite a stack oficial: React/Vite/TypeScript/Tailwind, PHP puro, PDO e MySQL/MariaDB Hostinger. Nao use Next.js, Docker, PostgreSQL, Drizzle, JWT ou localStorage para sessao.
+Leia docs/project-context.md, docs/checkpoints.md, README.md, docs/architecture.md, docs/security-baseline.md e docs/deployment-hostinger.md antes de alterar qualquer coisa. Respeite a stack oficial: React/Vite/TypeScript/Tailwind, PHP puro, PDO e MySQL/MariaDB Hostinger. Nao use Next.js, Docker, PostgreSQL, Drizzle, JWT ou localStorage para sessao.
 ```

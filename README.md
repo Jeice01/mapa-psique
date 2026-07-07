@@ -19,11 +19,12 @@ Nao usa Next.js, Drizzle, PostgreSQL, Docker, Docker Compose, JWT ou Node.js no 
 Antes de pedir alteracoes em um novo chat, leia ou peça para o Codex ler:
 
 - `docs/project-context.md`
+- `docs/checkpoints.md`
 - `docs/architecture.md`
 - `docs/security-baseline.md`
 - `docs/deployment-hostinger.md`
 
-O arquivo `docs/project-context.md` resume a arquitetura oficial, branches, deploy automatico, Hostinger e cuidados de seguranca.
+O arquivo `docs/project-context.md` resume a arquitetura oficial, branches, deploy automatico, Hostinger e cuidados de seguranca. O arquivo `docs/checkpoints.md` registra marcos tecnicos validados.
 
 ## Status atual do projeto
 

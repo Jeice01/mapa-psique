@@ -62,6 +62,8 @@ dumps/
 *credentials*
 *secret*
 *secrets*
+cookies.txt
+*cookies*.txt
 
 # editor/system
 .DS_Store
