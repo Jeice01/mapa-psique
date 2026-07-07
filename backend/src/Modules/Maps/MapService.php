@@ -1,0 +1,155 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Maps;
+
+use App\Database\Repositories\MapRepository;
+use App\Database\Repositories\PatientRepository;
+use App\Security\InputSanitizer;
+use InvalidArgumentException;
+
+final class MapService
+{
+    private const STATUSES = ['draft', 'ready_for_analysis', 'analyzed', 'archived'];
+
+    public function __construct(
+        private readonly MapRepository $maps = new MapRepository(),
+        private readonly PatientRepository $patients = new PatientRepository()
+    ) {
+    }
+
+    /**
+     * @return array{data:list<array<string,mixed>>,pagination:array{page:int,per_page:int,total:int}}
+     */
+    public function list(
+        string $ownerUserId,
+        ?string $query,
+        ?string $status,
+        ?string $patientId,
+        int $page,
+        int $perPage
+    ): array {
+        $query = $query === null ? null : InputSanitizer::maxLength(InputSanitizer::sanitizeString($query), 100);
+        $page = max(1, $page);
+        $perPage = max(1, min(50, $perPage));
+        $status = $status === '' ? null : $status;
+        $patientId = $patientId === '' ? null : $patientId;
+
+        if ($patientId !== null) {
+            $this->assertPatientOwnership($patientId, $ownerUserId);
+        }
+
+        $data = $this->maps->listByOwner($ownerUserId, $query, $status, $patientId, $page, $perPage);
+        $total = $this->maps->countByOwner($ownerUserId, $query, $status, $patientId);
+
+        return [
+            'data' => $data,
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    public function create(string $ownerUserId, array $payload): array
+    {
+        $data = $this->sanitizePayload($payload, true, $ownerUserId);
+        $data['owner_user_id'] = $ownerUserId;
+        $data['status'] = 'draft';
+        $data['canvas_json'] = null;
+        $id = $this->maps->create($data);
+
+        return $this->maps->findByIdAndOwner($id, $ownerUserId) ?? [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function find(string $id, string $ownerUserId): array
+    {
+        $map = $this->maps->findByIdAndOwner($id, $ownerUserId);
+
+        if ($map === null) {
+            throw new InvalidArgumentException('Map not found');
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    public function update(string $id, string $ownerUserId, array $payload): array
+    {
+        if ($this->maps->findByIdAndOwner($id, $ownerUserId) === null) {
+            throw new InvalidArgumentException('Map not found');
+        }
+
+        $data = $this->sanitizePayload($payload, false, $ownerUserId);
+        $this->maps->updateByOwner($id, $ownerUserId, $data);
+
+        return $this->maps->findByIdAndOwner($id, $ownerUserId) ?? [];
+    }
+
+    public function archive(string $id, string $ownerUserId, string $deletedBy): void
+    {
+        if (!$this->maps->softDeleteByOwner($id, $ownerUserId, $deletedBy)) {
+            throw new InvalidArgumentException('Map not found');
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function sanitizePayload(array $payload, bool $requireTitle, string $ownerUserId): array
+    {
+        $data = [];
+
+        if ($requireTitle || array_key_exists('title', $payload)) {
+            $data['title'] = InputSanitizer::maxLength(
+                InputSanitizer::required((string) ($payload['title'] ?? ''), 'title'),
+                255
+            );
+        }
+
+        if (array_key_exists('patient_id', $payload)) {
+            $patientId = trim((string) ($payload['patient_id'] ?? ''));
+            $data['patient_id'] = $patientId === '' ? null : $patientId;
+
+            if ($data['patient_id'] !== null) {
+                $this->assertPatientOwnership((string) $data['patient_id'], $ownerUserId);
+            }
+        }
+
+        if (array_key_exists('reason', $payload)) {
+            $data['reason'] = InputSanitizer::maxLength(trim((string) $payload['reason']), 3000);
+        }
+
+        if (array_key_exists('status', $payload)) {
+            $status = (string) $payload['status'];
+
+            if (!in_array($status, self::STATUSES, true)) {
+                throw new InvalidArgumentException('Invalid status');
+            }
+
+            $data['status'] = $status;
+        }
+
+        return $data;
+    }
+
+    private function assertPatientOwnership(string $patientId, string $ownerUserId): void
+    {
+        if ($this->patients->findByIdAndOwner($patientId, $ownerUserId) === null) {
+            throw new InvalidArgumentException('Patient not found');
+        }
+    }
+}
