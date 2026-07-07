@@ -129,7 +129,7 @@ final class MapRepository
      */
     public function updateByOwner(string $id, string $ownerUserId, array $data): bool
     {
-        $allowedFields = ['title', 'patient_id', 'reason', 'status'];
+        $allowedFields = ['title', 'patient_id', 'reason', 'status', 'canvas_json'];
         $sets = [];
         $params = ['id' => $id, 'owner_user_id' => $ownerUserId];
 

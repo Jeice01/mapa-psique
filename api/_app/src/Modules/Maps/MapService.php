@@ -143,6 +143,33 @@ final class MapService
             $data['status'] = $status;
         }
 
+        if (array_key_exists('canvas_json', $payload)) {
+            if ($payload['canvas_json'] === null) {
+                $data['canvas_json'] = null;
+            } elseif (is_array($payload['canvas_json'])) {
+                $encodedCanvas = json_encode(
+                    $payload['canvas_json'],
+                    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+                );
+
+                if ($encodedCanvas === false) {
+                    throw new InvalidArgumentException('Invalid canvas data');
+                }
+
+                $data['canvas_json'] = $encodedCanvas;
+            } elseif (is_string($payload['canvas_json'])) {
+                json_decode($payload['canvas_json'], true);
+
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new InvalidArgumentException('Invalid canvas data');
+                }
+
+                $data['canvas_json'] = $payload['canvas_json'];
+            } else {
+                throw new InvalidArgumentException('Invalid canvas data');
+            }
+        }
+
         return $data;
     }
 
