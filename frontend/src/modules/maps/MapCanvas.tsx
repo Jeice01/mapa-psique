@@ -1,5 +1,6 @@
-import { FormEvent, useEffect, useState } from "react";
-import type { MapCanvasData, MapDraft } from "../../shared/api/httpClient";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { listMapCanvasVersions } from "../../shared/api/httpClient";
+import type { MapCanvasData, MapCanvasVersion, MapDraft } from "../../shared/api/httpClient";
 
 type Props = {
   map: MapDraft;
@@ -78,9 +79,25 @@ const fields: Array<{ key: keyof MapCanvasData; label: string; help: string; pla
 export function MapCanvas({ map, onSave }: Props) {
   const [canvas, setCanvas] = useState<MapCanvasData>(() => normalizeCanvas(map.canvas_json));
   const [savedCanvas, setSavedCanvas] = useState<MapCanvasData>(() => normalizeCanvas(map.canvas_json));
+  const [versions, setVersions] = useState<MapCanvasVersion[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [versionsError, setVersionsError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
   const isDirty = serializeCanvas(canvas) !== serializeCanvas(savedCanvas);
+
+  const loadVersions = useCallback(async () => {
+    setVersionsLoading(true);
+    setVersionsError(null);
+
+    try {
+      setVersions(await listMapCanvasVersions(map.id));
+    } catch {
+      setVersionsError("Nao foi possivel carregar o historico do canvas.");
+    } finally {
+      setVersionsLoading(false);
+    }
+  }, [map.id]);
 
   useEffect(() => {
     const normalizedCanvas = normalizeCanvas(map.canvas_json);
@@ -88,6 +105,10 @@ export function MapCanvas({ map, onSave }: Props) {
     setSavedCanvas(normalizedCanvas);
     setSaveState("idle");
   }, [map.canvas_json, map.id]);
+
+  useEffect(() => {
+    void loadVersions();
+  }, [loadVersions]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -98,6 +119,7 @@ export function MapCanvas({ map, onSave }: Props) {
       await onSave({ canvas_json: canvas });
       setSavedCanvas(canvas);
       setSaveState("saved");
+      await loadVersions();
     } catch {
       setSaveState("error");
     } finally {
@@ -140,6 +162,30 @@ export function MapCanvas({ map, onSave }: Props) {
           </label>
         ))}
       </div>
+
+      <section className="mt-5 border-t border-slate-200 pt-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <h4 className="text-sm font-semibold text-slate-950">Histórico do canvas</h4>
+          {versionsLoading ? <span className="text-xs text-slate-500">Carregando histórico...</span> : null}
+        </div>
+        {versionsError ? <p className="mt-2 text-sm text-red-700">{versionsError}</p> : null}
+        {!versionsLoading && versions.length === 0 && !versionsError ? (
+          <p className="mt-2 text-sm text-slate-500">Nenhuma versão salva ainda.</p>
+        ) : null}
+        {versions.length > 0 ? (
+          <div className="mt-3 overflow-hidden rounded-md border border-slate-200 bg-white">
+            {versions.map((version) => (
+              <div className="flex flex-col gap-1 border-b border-slate-100 px-3 py-2 last:border-0 sm:flex-row sm:items-center sm:justify-between" key={version.id}>
+                <div>
+                  <p className="text-sm font-medium text-slate-900">Versão {version.version_number}</p>
+                  <p className="text-xs text-slate-500">{version.summary ?? "Snapshot do canvas"}</p>
+                </div>
+                <time className="text-xs text-slate-500">{formatDate(version.created_at)}</time>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </section>
     </form>
   );
 }
@@ -175,6 +221,14 @@ function normalizeCanvas(value: MapDraft["canvas_json"]): MapCanvasData {
 
 function serializeCanvas(canvas: MapCanvasData): string {
   return JSON.stringify(canvas);
+}
+
+function formatDate(value: string): string {
+  if (value.trim() === "") {
+    return "-";
+  }
+
+  return value;
 }
 
 function statusText(isDirty: boolean, saveState: "idle" | "saved" | "error"): string {

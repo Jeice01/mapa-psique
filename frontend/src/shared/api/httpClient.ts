@@ -66,6 +66,15 @@ export type MapDraft = {
   created_at?: string;
 };
 
+export type MapCanvasVersion = {
+  id: string;
+  map_id: string;
+  user_id?: string | null;
+  version_number: number;
+  summary?: string | null;
+  created_at: string;
+};
+
 type Pagination = {
   page: number;
   per_page: number;
@@ -263,6 +272,12 @@ export async function updateMap(id: string, payload: Partial<MapDraft>): Promise
   });
 
   return response.map;
+}
+
+export async function listMapCanvasVersions(id: string): Promise<MapCanvasVersion[]> {
+  const response = await request<{ success: boolean; data: MapCanvasVersion[] }>(`/maps/${encodeURIComponent(id)}/canvas-versions`);
+
+  return response.data;
 }
 
 export async function archiveMap(id: string): Promise<void> {
