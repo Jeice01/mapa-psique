@@ -88,3 +88,86 @@ next_steps=Confirmar retorno preenchido no GET
 Proxima etapa planejada:
 
 - Evoluir o canvas visual/interativo conforme proximo prompt, sem IA, PDF ou upload ate que essas etapas sejam explicitamente solicitadas.
+
+## Checkpoint tecnico - Prompt 06 Refinamento visual e funcional do Canvas
+
+**Data:** 07/07/2026
+**Commit main:** `ea3d157 feat: refine map canvas ux`
+**Commit deploy:** `2a3eed9 deploy: publish prompt 06 canvas refinements`
+**Ambiente:** Producao Hostinger
+**Dominio:** https://mapapsique.orbisconect.com
+
+Status: aprovado em producao.
+
+Validacoes:
+
+- Frontend publicado com build Vite atualizado.
+- Assets novos publicados:
+  - `assets/index-C5rDb0JQ.css`
+  - `assets/index-Cc5H1XcY.js`
+- Backend runtime atualizado em:
+  - `api/_app/src/Database/Repositories/MapRepository.php`
+- `.git/config` publico retorna `403 Forbidden`.
+- Login com sessao por cookie HttpOnly validado.
+- `GET /api/maps/{id}` retorna `200 OK`.
+- `patient_name` retornando corretamente no detalhe do mapa.
+- `canvas_json` preservado apos deploy.
+- Interface exibe paciente pelo nome.
+- Status exibido como `Rascunho`, mantendo valor interno `draft`.
+- Canvas exibido com campos reflexivos.
+- Indicador inicial `Sem alteracoes` validado.
+- Alteracao de campo muda indicador para `Alteracoes nao salvas`.
+- Botao `Salvar canvas` habilita durante edicao.
+- Apos salvar, indicador retorna para `Sem alteracoes`.
+- Dados permanecem preenchidos apos salvamento.
+
+Observacoes:
+
+- Sem IA, PDF, upload, relatorio ou novas dependencias nesta etapa.
+- Estrutura protegida da API mantida em `api/_app`.
+
+## Checkpoint tecnico - Prompt 07 Historico/versionamento simples do canvas
+
+**Data/hora da validacao:** 07/07/2026 20:13:53 UTC
+**Commit main:** `8a23f4e feat: add canvas version history`
+**Commit deploy:** `a97e601 deploy: publish canvas version history`
+**Ambiente:** Producao Hostinger
+**Dominio:** https://mapapsique.orbisconect.com
+
+Status final: PROMPT 07 VALIDADO EM PRODUCAO.
+
+Resumo implementado:
+
+- Historico simples de versoes do canvas por mapa.
+- Migration criada em `backend/migrations/005_map_canvas_versions.sql`.
+- Tabela `map_canvas_versions` com snapshot completo do canvas em `canvas_data`.
+- Versionamento automatico no salvamento de `canvas_json`.
+- Criacao de versao dentro do fluxo transacional de atualizacao do mapa.
+- Endpoint criado: `GET /api/maps/{id}/canvas-versions`.
+- Listagem retorna apenas metadados, sem expor `canvas_data`.
+
+Mapa usado na validacao:
+
+```text
+d4926974-e4f2-4050-8cf8-cae8aebed730
+```
+
+Validacoes em producao:
+
+- Endpoint de historico publicado e respondendo `HTTP/1.1 200 OK`.
+- Antes do salvamento, o endpoint retornou `{"success":true,"data":[]}`.
+- Salvamento feito via `PUT /api/maps/{id}` retornou `HTTP/1.1 200 OK`.
+- Snapshot criado apos salvamento com `canvas_json`.
+- `version_number` gerado corretamente.
+- `canvas_data` nao aparece na listagem do historico.
+- Mapa principal continuou respondendo `HTTP/1.1 200 OK`.
+- Sem restauracao de versao, IA, PDF, upload ou comparacao visual nesta etapa.
+
+Primeira versao criada:
+
+```text
+id=a8842fcc-b15c-47ae-a8df-3170be80940f
+version_number=1
+summary=Snapshot do canvas
+created_at=2026-07-07 20:13:36
+```
