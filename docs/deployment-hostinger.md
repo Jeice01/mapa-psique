@@ -39,6 +39,8 @@ SESSION_LIFETIME_MINUTES=120
 CSRF_ENABLED=true
 ```
 
+Tambem sao aceitos os aliases comuns na Hostinger: `DB_NAME`, `DB_USER` e `DB_PASS`.
+
 ## Banco
 
 Importe as migrations nesta ordem no MySQL/MariaDB usando o painel da Hostinger, phpMyAdmin ou cliente SQL:

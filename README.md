@@ -70,6 +70,8 @@ SESSION_LIFETIME_MINUTES=120
 CSRF_ENABLED=true
 ```
 
+O backend aceita tambem os aliases comuns na Hostinger: `DB_NAME`, `DB_USER` e `DB_PASS`.
+
 ## Rodar frontend
 
 ```bash
