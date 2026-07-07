@@ -71,6 +71,16 @@ export function MapList() {
     }
   }
 
+  async function handleDetailsSave(payload: Partial<MapDraft>) {
+    if (!details) {
+      return;
+    }
+
+    const updatedMap = await updateMap(details.id, payload);
+    setDetails(updatedMap);
+    setMaps((current) => current.map((map) => (map.id === updatedMap.id ? { ...map, ...updatedMap } : map)));
+  }
+
   async function handleArchive(id: string) {
     await archiveMap(id).catch(() => setError("Nao foi possivel arquivar o mapa."));
     await load();
@@ -91,7 +101,7 @@ export function MapList() {
         <button className="rounded-md bg-brand-600 px-4 py-2 font-medium text-white" onClick={() => { setEditing(null); setShowForm(true); }} type="button">Novo mapa</button>
       </div>
       {showForm ? <MapForm map={editing} onCancel={() => setShowForm(false)} onSubmit={handleSubmit} /> : null}
-      {details ? <MapDetails map={details} onClose={() => setDetails(null)} /> : null}
+      {details ? <MapDetails map={details} onClose={() => setDetails(null)} onSave={handleDetailsSave} /> : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       {loading ? <p className="text-sm text-slate-500">Carregando mapas...</p> : null}
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">

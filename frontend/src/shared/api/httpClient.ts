@@ -43,6 +43,18 @@ export type Patient = {
   created_at?: string;
 };
 
+export type MapCanvasData = {
+  main_demand: string;
+  current_context: string;
+  emotional_history: string;
+  recurring_patterns: string;
+  core_beliefs: string;
+  defense_strategies: string;
+  internal_resources: string;
+  reflective_hypotheses: string;
+  next_steps: string;
+};
+
 export type MapDraft = {
   id: string;
   title: string;
@@ -50,7 +62,7 @@ export type MapDraft = {
   patient_name?: string | null;
   reason?: string | null;
   status: string;
-  canvas_json?: unknown;
+  canvas_json?: MapCanvasData | string | null;
   created_at?: string;
 };
 
