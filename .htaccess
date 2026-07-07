@@ -6,9 +6,14 @@ RewriteEngine On
 RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
 
 # Prevent direct web access to backend internals and source-only folders.
+RewriteRule ^backend(/|$) - [F,L,NC]
 RewriteRule ^backend/(src|migrations|storage)(/|$) - [F,L,NC]
 RewriteRule ^backend/(\.env|\.env\..*|composer\.(json|lock))$ - [F,L,NC]
 RewriteRule ^frontend(/|$) - [F,L,NC]
+
+# Missing static assets should not fall back to the SPA document.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^assets/ - [F,L,NC]
 
 # Prevent SPA fallback from serving source/build metadata paths as index.html.
 RewriteRule ^(package(-lock)?\.json|pnpm-lock\.yaml|yarn\.lock|composer\.(json|lock))$ - [F,L,NC]
