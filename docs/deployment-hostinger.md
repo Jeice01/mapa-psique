@@ -37,6 +37,8 @@ DB_CHARSET=utf8mb4
 SESSION_COOKIE_NAME=mapa_psique_session
 SESSION_LIFETIME_MINUTES=120
 CSRF_ENABLED=true
+MAIL_FROM=no-reply@mapapsique.orbisconect.com
+MAIL_FROM_NAME=Mapa da Psique
 ```
 
 Tambem sao aceitos os aliases comuns na Hostinger: `DB_NAME`, `DB_USER` e `DB_PASS`.
@@ -48,6 +50,7 @@ Importe as migrations nesta ordem no MySQL/MariaDB usando o painel da Hostinger,
 1. `backend/migrations/001_initial_schema.sql`
 2. `backend/migrations/002_complete_schema.sql`
 3. `backend/migrations/003_seed_initial_data.sql`
+4. `backend/migrations/004_password_resets.sql`
 
 As migrations com triggers usam `DELIMITER`; rode pelo phpMyAdmin ou por cliente MySQL/MariaDB que suporte esse comando.
 

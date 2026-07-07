@@ -4,9 +4,10 @@ import { login, type AuthResponse } from "../../shared/api/httpClient";
 type Props = {
   onLogin: (response: AuthResponse) => void;
   onRegisterClick: () => void;
+  onForgotPasswordClick: () => void;
 };
 
-export function LoginPage({ onLogin, onRegisterClick }: Props) {
+export function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +62,9 @@ export function LoginPage({ onLogin, onRegisterClick }: Props) {
       </form>
       <button className="mt-4 text-sm font-medium text-brand-700" onClick={onRegisterClick} type="button">
         Criar cadastro
+      </button>
+      <button className="ml-4 mt-4 text-sm font-medium text-slate-700" onClick={onForgotPasswordClick} type="button">
+        Esqueci minha senha
       </button>
     </section>
   );

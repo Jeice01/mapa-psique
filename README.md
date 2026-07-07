@@ -68,6 +68,8 @@ DB_CHARSET=utf8mb4
 SESSION_COOKIE_NAME=mapa_psique_session
 SESSION_LIFETIME_MINUTES=120
 CSRF_ENABLED=true
+MAIL_FROM=no-reply@mapapsique.orbisconect.com
+MAIL_FROM_NAME=Mapa da Psique
 ```
 
 O backend aceita tambem os aliases comuns na Hostinger: `DB_NAME`, `DB_USER` e `DB_PASS`.
@@ -122,6 +124,8 @@ Endpoints iniciais:
 - `GET /api/csrf-token`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password`
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
 - `GET /api/consents/active`
@@ -156,6 +160,7 @@ Importe as migrations nesta ordem:
 1. `backend/migrations/001_initial_schema.sql`
 2. `backend/migrations/002_complete_schema.sql`
 3. `backend/migrations/003_seed_initial_data.sql`
+4. `backend/migrations/004_password_resets.sql`
 
 No MySQL/MariaDB da Hostinger via phpMyAdmin, painel da Hostinger ou cliente SQL.
 

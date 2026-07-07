@@ -1,18 +1,27 @@
 import { useEffect, useState } from "react";
+import { ForgotPasswordPage } from "../modules/auth/ForgotPasswordPage";
 import { LoginPage } from "../modules/auth/LoginPage";
 import { RegisterPage } from "../modules/auth/RegisterPage";
+import { ResetPasswordPage } from "../modules/auth/ResetPasswordPage";
 import { ConsentPage } from "../modules/consents/ConsentPage";
 import { ProtectedHomePage } from "../modules/protected/ProtectedHomePage";
 import { me, type User } from "../shared/api/httpClient";
 
-type View = "login" | "register" | "consent" | "protected";
+type View = "login" | "register" | "forgot-password" | "reset-password" | "consent" | "protected";
 
 export function App() {
-  const [view, setView] = useState<View>("login");
+  const initialResetToken = new URLSearchParams(window.location.search).get("reset_token") ?? "";
+  const [view, setView] = useState<View>(initialResetToken === "" ? "login" : "reset-password");
+  const [resetToken, setResetToken] = useState(initialResetToken);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (resetToken !== "") {
+      setLoading(false);
+      return;
+    }
+
     me()
       .then((response) => {
         setUser(response.user);
@@ -23,7 +32,7 @@ export function App() {
         setView("login");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [resetToken]);
 
   function resetSession() {
     setUser(null);
@@ -46,10 +55,23 @@ export function App() {
             setView(response.requires_consent ? "consent" : "protected");
           }}
           onRegisterClick={() => setView("register")}
+          onForgotPasswordClick={() => setView("forgot-password")}
         />
       ) : null}
 
       {!loading && view === "register" ? <RegisterPage onBackToLogin={() => setView("login")} /> : null}
+
+      {!loading && view === "forgot-password" ? <ForgotPasswordPage onBackToLogin={() => setView("login")} /> : null}
+
+      {!loading && view === "reset-password" ? (
+        <ResetPasswordPage
+          token={resetToken}
+          onBackToLogin={() => {
+            setResetToken("");
+            setView("login");
+          }}
+        />
+      ) : null}
 
       {!loading && view === "consent" && user ? <ConsentPage onAccepted={() => setView("protected")} /> : null}
 

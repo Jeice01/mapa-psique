@@ -72,6 +72,15 @@ type LoginPayload = {
   password: string;
 };
 
+type ForgotPasswordPayload = {
+  email: string;
+};
+
+type ResetPasswordPayload = {
+  token: string;
+  password: string;
+};
+
 type ApiErrorPayload = {
   message?: string;
   error?: string;
@@ -110,6 +119,26 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
   const csrfToken = await getCsrfToken();
 
   return request<AuthResponse>("/auth/login", {
+    method: "POST",
+    csrfToken,
+    body: payload,
+  });
+}
+
+export async function requestPasswordReset(payload: ForgotPasswordPayload): Promise<{ status: string; message: string }> {
+  const csrfToken = await getCsrfToken();
+
+  return request<{ status: string; message: string }>("/auth/forgot-password", {
+    method: "POST",
+    csrfToken,
+    body: payload,
+  });
+}
+
+export async function resetPassword(payload: ResetPasswordPayload): Promise<{ status: string; message: string }> {
+  const csrfToken = await getCsrfToken();
+
+  return request<{ status: string; message: string }>("/auth/reset-password", {
     method: "POST",
     csrfToken,
     body: payload,
