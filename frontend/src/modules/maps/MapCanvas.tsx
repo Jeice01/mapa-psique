@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { listMapCanvasVersions } from "../../shared/api/httpClient";
-import type { MapCanvasData, MapCanvasVersion, MapDraft } from "../../shared/api/httpClient";
+import { getMapCanvasVersion, listMapCanvasVersions } from "../../shared/api/httpClient";
+import type { MapCanvasData, MapCanvasVersion, MapCanvasVersionDetails, MapDraft } from "../../shared/api/httpClient";
 
 type Props = {
   map: MapDraft;
@@ -82,6 +82,9 @@ export function MapCanvas({ map, onSave }: Props) {
   const [versions, setVersions] = useState<MapCanvasVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [versionsError, setVersionsError] = useState<string | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<MapCanvasVersionDetails | null>(null);
+  const [versionDetailsLoadingId, setVersionDetailsLoadingId] = useState<string | null>(null);
+  const [versionDetailsError, setVersionDetailsError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
   const isDirty = serializeCanvas(canvas) !== serializeCanvas(savedCanvas);
@@ -104,6 +107,8 @@ export function MapCanvas({ map, onSave }: Props) {
     setCanvas(normalizedCanvas);
     setSavedCanvas(normalizedCanvas);
     setSaveState("idle");
+    setSelectedVersion(null);
+    setVersionDetailsError(null);
   }, [map.canvas_json, map.id]);
 
   useEffect(() => {
@@ -129,6 +134,19 @@ export function MapCanvas({ map, onSave }: Props) {
 
   function updateField(key: keyof MapCanvasData, value: string) {
     setCanvas((current) => ({ ...current, [key]: value }));
+  }
+
+  async function handleViewVersion(versionId: string) {
+    setVersionDetailsLoadingId(versionId);
+    setVersionDetailsError(null);
+
+    try {
+      setSelectedVersion(await getMapCanvasVersion(map.id, versionId));
+    } catch {
+      setVersionDetailsError("Nao foi possivel carregar os detalhes da versao.");
+    } finally {
+      setVersionDetailsLoadingId(null);
+    }
   }
 
   return (
@@ -180,9 +198,34 @@ export function MapCanvas({ map, onSave }: Props) {
                   <p className="text-sm font-medium text-slate-900">Versão {version.version_number}</p>
                   <p className="text-xs text-slate-500">{version.summary ?? "Snapshot do canvas"}</p>
                 </div>
-                <time className="text-xs text-slate-500">{formatDate(version.created_at)}</time>
+                <div className="flex flex-wrap items-center gap-3">
+                  <time className="text-xs text-slate-500">{formatDate(version.created_at)}</time>
+                  <button
+                    className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={versionDetailsLoadingId === version.id}
+                    onClick={() => void handleViewVersion(version.id)}
+                    type="button"
+                  >
+                    {versionDetailsLoadingId === version.id ? "Carregando..." : "Ver detalhes"}
+                  </button>
+                </div>
               </div>
             ))}
+          </div>
+        ) : null}
+        {versionDetailsError ? <p className="mt-3 text-sm text-red-700">{versionDetailsError}</p> : null}
+        {selectedVersion ? (
+          <div className="mt-4 rounded-md border border-slate-200 bg-white p-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-950">Versão {selectedVersion.version_number}</p>
+                <p className="text-xs text-slate-500">{selectedVersion.summary ?? "Snapshot do canvas"}</p>
+              </div>
+              <time className="text-xs text-slate-500">{formatDate(selectedVersion.created_at)}</time>
+            </div>
+            <pre className="mt-3 max-h-64 overflow-auto rounded-md bg-slate-950 p-3 text-xs leading-5 text-slate-100">
+              {formatCanvasData(selectedVersion.canvas_data)}
+            </pre>
           </div>
         ) : null}
       </section>
@@ -229,6 +272,22 @@ function formatDate(value: string): string {
   }
 
   return value;
+}
+
+function formatCanvasData(value: unknown): string {
+  const maxPreviewLength = 6000;
+
+  try {
+    const formatted = JSON.stringify(value, null, 2);
+
+    if (formatted.length > maxPreviewLength) {
+      return `${formatted.slice(0, maxPreviewLength)}\n\n...previsualizacao limitada.`;
+    }
+
+    return formatted;
+  } catch {
+    return "Dados da versao carregados com sucesso.";
+  }
 }
 
 function statusText(isDirty: boolean, saveState: "idle" | "saved" | "error"): string {

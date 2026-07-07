@@ -242,6 +242,27 @@ final class MapRepository
         return $statement->fetchAll() ?: [];
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findCanvasVersionById(string $mapId, string $versionId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, map_id, user_id, version_number, summary, created_at, canvas_data
+             FROM map_canvas_versions
+             WHERE id = :version_id
+               AND map_id = :map_id
+             LIMIT 1'
+        );
+        $statement->execute([
+            'version_id' => $versionId,
+            'map_id' => $mapId,
+        ]);
+        $version = $statement->fetch();
+
+        return is_array($version) ? $version : null;
+    }
+
     public function softDeleteByOwner(string $id, string $ownerUserId, string $deletedBy): bool
     {
         $statement = $this->pdo->prepare(

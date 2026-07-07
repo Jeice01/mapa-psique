@@ -75,6 +75,10 @@ export type MapCanvasVersion = {
   created_at: string;
 };
 
+export type MapCanvasVersionDetails = MapCanvasVersion & {
+  canvas_data: unknown;
+};
+
 type Pagination = {
   page: number;
   per_page: number;
@@ -276,6 +280,14 @@ export async function updateMap(id: string, payload: Partial<MapDraft>): Promise
 
 export async function listMapCanvasVersions(id: string): Promise<MapCanvasVersion[]> {
   const response = await request<{ success: boolean; data: MapCanvasVersion[] }>(`/maps/${encodeURIComponent(id)}/canvas-versions`);
+
+  return response.data;
+}
+
+export async function getMapCanvasVersion(mapId: string, versionId: string): Promise<MapCanvasVersionDetails> {
+  const response = await request<{ success: boolean; data: MapCanvasVersionDetails }>(
+    `/maps/${encodeURIComponent(mapId)}/canvas-versions/${encodeURIComponent(versionId)}`
+  );
 
   return response.data;
 }

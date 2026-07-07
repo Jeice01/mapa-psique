@@ -107,6 +107,29 @@ final class MapController
         }
     }
 
+    public function canvasVersion(string $id, string $versionId): JsonResponse
+    {
+        $session = AccessGuard::require(['profissional']);
+
+        if ($session instanceof JsonResponse) {
+            return $session;
+        }
+
+        try {
+            $version = (new MapService())->findCanvasVersion($id, $versionId, $session['user_id']);
+            Audit::record('map.canvas_version_viewed', $session['user_id'], 'maps', $id, ['status_code' => 200]);
+
+            return JsonResponse::ok([
+                'success' => true,
+                'data' => $version,
+            ]);
+        } catch (InvalidArgumentException) {
+            return JsonResponse::error('Canvas version not found', 404);
+        } catch (Throwable) {
+            return JsonResponse::error('Could not load canvas version', 500);
+        }
+    }
+
     public function update(string $id): JsonResponse
     {
         $session = $this->guardMutable();

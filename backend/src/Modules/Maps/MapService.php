@@ -134,6 +134,31 @@ final class MapService
         return $this->maps->listCanvasVersions($id);
     }
 
+    /**
+     * @return array<string,mixed>
+     */
+    public function findCanvasVersion(string $id, string $versionId, string $ownerUserId): array
+    {
+        if ($this->maps->findByIdAndOwner($id, $ownerUserId) === null) {
+            throw new InvalidArgumentException('Map not found');
+        }
+
+        $version = $this->maps->findCanvasVersionById($id, $versionId);
+
+        if ($version === null) {
+            throw new InvalidArgumentException('Canvas version not found');
+        }
+
+        $canvasData = (string) ($version['canvas_data'] ?? '');
+        $decodedCanvas = json_decode($canvasData, true);
+
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $version['canvas_data'] = $decodedCanvas;
+        }
+
+        return $version;
+    }
+
     public function archive(string $id, string $ownerUserId, string $deletedBy): void
     {
         if (!$this->maps->softDeleteByOwner($id, $ownerUserId, $deletedBy)) {
