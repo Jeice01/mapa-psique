@@ -168,6 +168,80 @@ final class MapRepository
         return $statement->rowCount() > 0;
     }
 
+    public function beginTransaction(): void
+    {
+        if (!$this->pdo->inTransaction()) {
+            $this->pdo->beginTransaction();
+        }
+    }
+
+    public function commit(): void
+    {
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->commit();
+        }
+    }
+
+    public function rollBack(): void
+    {
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
+        }
+    }
+
+    /**
+     * @param array<string, mixed>|string $canvasData
+     */
+    public function createCanvasVersion(string $mapId, ?string $userId, array|string $canvasData, ?string $summary = null): void
+    {
+        $encodedCanvas = is_array($canvasData)
+            ? json_encode($canvasData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            : $canvasData;
+
+        if ($encodedCanvas === false || trim($encodedCanvas) === '') {
+            throw new InvalidArgumentException('Invalid canvas data');
+        }
+
+        $versionStatement = $this->pdo->prepare(
+            'SELECT COALESCE(MAX(version_number), 0)
+             FROM map_canvas_versions
+             WHERE map_id = :map_id'
+        );
+        $versionStatement->execute(['map_id' => $mapId]);
+        $lastVersion = $versionStatement->fetchColumn();
+        $nextVersion = ((int) $lastVersion) + 1;
+
+        $statement = $this->pdo->prepare(
+            'INSERT INTO map_canvas_versions (id, map_id, user_id, version_number, canvas_data, summary, created_at)
+             VALUES (:id, :map_id, :user_id, :version_number, :canvas_data, :summary, CURRENT_TIMESTAMP)'
+        );
+
+        $statement->execute([
+            'id' => Uuid::v4(),
+            'map_id' => $mapId,
+            'user_id' => $userId,
+            'version_number' => $nextVersion,
+            'canvas_data' => $encodedCanvas,
+            'summary' => $summary,
+        ]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function listCanvasVersions(string $mapId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, map_id, user_id, version_number, summary, created_at
+             FROM map_canvas_versions
+             WHERE map_id = :map_id
+             ORDER BY version_number DESC, created_at DESC'
+        );
+        $statement->execute(['map_id' => $mapId]);
+
+        return $statement->fetchAll() ?: [];
+    }
+
     public function softDeleteByOwner(string $id, string $ownerUserId, string $deletedBy): bool
     {
         $statement = $this->pdo->prepare(

@@ -66,6 +66,7 @@ $router->put('/api/patients/{id}', [PatientController::class, 'update']);
 $router->delete('/api/patients/{id}', [PatientController::class, 'delete']);
 $router->get('/api/maps', [MapController::class, 'index']);
 $router->post('/api/maps', [MapController::class, 'create']);
+$router->get('/api/maps/{id}/canvas-versions', [MapController::class, 'canvasVersions']);
 $router->get('/api/maps/{id}', [MapController::class, 'show']);
 $router->put('/api/maps/{id}', [MapController::class, 'update']);
 $router->delete('/api/maps/{id}', [MapController::class, 'delete']);

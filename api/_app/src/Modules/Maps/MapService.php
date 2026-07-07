@@ -8,6 +8,7 @@ use App\Database\Repositories\MapRepository;
 use App\Database\Repositories\PatientRepository;
 use App\Security\InputSanitizer;
 use InvalidArgumentException;
+use Throwable;
 
 final class MapService
 {
@@ -93,9 +94,44 @@ final class MapService
         }
 
         $data = $this->sanitizePayload($payload, false, $ownerUserId);
+        $shouldVersionCanvas = array_key_exists('canvas_json', $data);
+
+        if ($shouldVersionCanvas) {
+            $this->maps->beginTransaction();
+
+            try {
+                $this->maps->updateByOwner($id, $ownerUserId, $data);
+                $this->maps->createCanvasVersion(
+                    $id,
+                    $ownerUserId,
+                    (string) ($data['canvas_json'] ?? 'null'),
+                    'Snapshot do canvas'
+                );
+                $this->maps->commit();
+            } catch (Throwable $exception) {
+                $this->maps->rollBack();
+
+                throw $exception;
+            }
+
+            return $this->maps->findByIdAndOwner($id, $ownerUserId) ?? [];
+        }
+
         $this->maps->updateByOwner($id, $ownerUserId, $data);
 
         return $this->maps->findByIdAndOwner($id, $ownerUserId) ?? [];
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function listCanvasVersions(string $id, string $ownerUserId): array
+    {
+        if ($this->maps->findByIdAndOwner($id, $ownerUserId) === null) {
+            throw new InvalidArgumentException('Map not found');
+        }
+
+        return $this->maps->listCanvasVersions($id);
     }
 
     public function archive(string $id, string $ownerUserId, string $deletedBy): void
