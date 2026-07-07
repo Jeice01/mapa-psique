@@ -81,11 +81,15 @@ final class MapRepository
     public function findByIdAndOwner(string $id, string $ownerUserId): ?array
     {
         $statement = $this->pdo->prepare(
-            'SELECT *
+            'SELECT maps.*, patients.name AS patient_name
              FROM maps
-             WHERE id = :id
-               AND owner_user_id = :owner_user_id
-               AND deleted_at IS NULL
+             LEFT JOIN patients
+               ON patients.id = maps.patient_id
+              AND patients.owner_user_id = maps.owner_user_id
+              AND patients.deleted_at IS NULL
+             WHERE maps.id = :id
+               AND maps.owner_user_id = :owner_user_id
+               AND maps.deleted_at IS NULL
              LIMIT 1'
         );
         $statement->execute(['id' => $id, 'owner_user_id' => $ownerUserId]);
