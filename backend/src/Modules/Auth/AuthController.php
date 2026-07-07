@@ -38,6 +38,8 @@ final class AuthController
 
         try {
             return JsonResponse::ok($this->service->register($this->jsonBody()));
+        } catch (InvalidArgumentException $exception) {
+            return JsonResponse::error($exception->getMessage(), 400);
         } catch (Throwable) {
             return JsonResponse::error('Could not register user', 400);
         }
