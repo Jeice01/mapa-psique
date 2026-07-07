@@ -14,6 +14,17 @@ Aplicacao web para profissionais conduzirem a tecnica do Mapa da Psiquê com pac
 
 Nao usa Next.js, Drizzle, PostgreSQL, Docker, Docker Compose, JWT ou Node.js no servidor Hostinger.
 
+## Contexto para novos chats
+
+Antes de pedir alteracoes em um novo chat, leia ou peça para o Codex ler:
+
+- `docs/project-context.md`
+- `docs/architecture.md`
+- `docs/security-baseline.md`
+- `docs/deployment-hostinger.md`
+
+O arquivo `docs/project-context.md` resume a arquitetura oficial, branches, deploy automatico, Hostinger e cuidados de seguranca.
+
 ## Status atual do projeto
 
 Etapa 1 — Fundação: aprovada.
@@ -203,15 +214,28 @@ git status --short --ignored
 
 ## Deploy Hostinger
 
-Resumo do fluxo planejado:
+Resumo do fluxo atual:
 
 1. Manter o codigo-fonte na branch `main`.
 2. Gerar o build do frontend com `npm run build`.
-3. Criar futuramente a branch `deploy` apenas com os artefatos prontos para publicacao.
-4. Publicar os arquivos estaticos de `frontend/dist` no subdominio.
-5. Publicar o backend PHP mantendo somente `backend/public` exposto como pasta publica.
-6. Criar `backend/.env` diretamente na Hostinger com credenciais reais.
-7. Importar as migrations `001`, `002` e `003` no banco MySQL/MariaDB.
+3. Atualizar a branch `deploy` com os artefatos prontos para publicacao.
+4. Fazer push da branch `deploy`.
+5. O GitHub Actions conecta na Hostinger por SSH e executa `git pull origin deploy`.
+6. Manter `backend/.env` diretamente na Hostinger com credenciais reais.
+7. Importar novas migrations manualmente no MySQL/MariaDB quando forem criadas.
+
+Workflow:
+
+```text
+.github/workflows/deploy-hostinger.yml
+```
+
+Deploy manual de contingencia:
+
+```bash
+cd /home/u754689460/domains/mapapsique.orbisconect.com/public_html
+git pull origin deploy
+```
 
 Mais detalhes em `docs/deployment-hostinger.md`.
 
