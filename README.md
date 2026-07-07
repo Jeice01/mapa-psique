@@ -51,6 +51,8 @@ copy backend\.env.example backend\.env
 
 Configure `backend/.env` com as credenciais MySQL/MariaDB locais ou da Hostinger. Nunca commite `.env` real.
 
+O frontend usa `/api` como URL base padrao. Em producao, mantenha `VITE_API_BASE_URL=/api` ou omita a variavel para que o build chame a API no mesmo dominio.
+
 Exemplo de producao:
 
 ```text
@@ -77,6 +79,14 @@ npm run dev
 ```
 
 Frontend: `http://localhost:5173`
+
+Para desenvolvimento local contra outra origem de API, crie `frontend/.env` local e nao versionado com `VITE_API_BASE_URL` apontando para a URL desejada. Em producao, use `/api`.
+
+```text
+VITE_API_BASE_URL=/api
+```
+
+Nao commite `frontend/.env`.
 
 ## Rodar backend
 

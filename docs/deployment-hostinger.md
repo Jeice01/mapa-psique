@@ -2,6 +2,8 @@
 
 ## Frontend
 
+Em producao, o frontend deve chamar a API de forma relativa no mesmo dominio. Mantenha `VITE_API_BASE_URL=/api` ou omita a variavel ao gerar o build.
+
 Gere o build:
 
 ```bash

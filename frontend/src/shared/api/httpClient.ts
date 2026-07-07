@@ -1,4 +1,4 @@
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/$/, "");
 
 export type HealthStatus = {
   status: string;
@@ -87,11 +87,11 @@ export class ApiError extends Error {
 }
 
 export async function getHealthStatus(): Promise<HealthStatus> {
-  return request<HealthStatus>("/api/health");
+  return request<HealthStatus>("/health");
 }
 
 export async function getCsrfToken(): Promise<string> {
-  const response = await request<{ csrf_token: string }>("/api/csrf-token");
+  const response = await request<{ csrf_token: string }>("/csrf-token");
 
   return response.csrf_token;
 }
@@ -99,7 +99,7 @@ export async function getCsrfToken(): Promise<string> {
 export async function register(payload: RegisterPayload): Promise<{ status: string; user: User }> {
   const csrfToken = await getCsrfToken();
 
-  return request<{ status: string; user: User }>("/api/auth/register", {
+  return request<{ status: string; user: User }>("/auth/register", {
     method: "POST",
     csrfToken,
     body: payload,
@@ -109,7 +109,7 @@ export async function register(payload: RegisterPayload): Promise<{ status: stri
 export async function login(payload: LoginPayload): Promise<AuthResponse> {
   const csrfToken = await getCsrfToken();
 
-  return request<AuthResponse>("/api/auth/login", {
+  return request<AuthResponse>("/auth/login", {
     method: "POST",
     csrfToken,
     body: payload,
@@ -119,18 +119,18 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
 export async function logout(): Promise<void> {
   const csrfToken = await getCsrfToken();
 
-  await request<{ status: string }>("/api/auth/logout", {
+  await request<{ status: string }>("/auth/logout", {
     method: "POST",
     csrfToken,
   });
 }
 
 export async function me(): Promise<AuthResponse> {
-  return request<AuthResponse>("/api/auth/me");
+  return request<AuthResponse>("/auth/me");
 }
 
 export async function getActiveConsent(): Promise<ConsentTerm> {
-  const response = await request<{ consent_term: ConsentTerm }>("/api/consents/active");
+  const response = await request<{ consent_term: ConsentTerm }>("/consents/active");
 
   return response.consent_term;
 }
@@ -138,7 +138,7 @@ export async function getActiveConsent(): Promise<ConsentTerm> {
 export async function acceptConsent(consentTermId?: string): Promise<void> {
   const csrfToken = await getCsrfToken();
 
-  await request<{ status: string }>("/api/consents/accept", {
+  await request<{ status: string }>("/consents/accept", {
     method: "POST",
     csrfToken,
     body: consentTermId ? { consent_term_id: consentTermId } : {},
@@ -146,18 +146,18 @@ export async function acceptConsent(consentTermId?: string): Promise<void> {
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
-  const response = await request<{ summary: DashboardSummary }>("/api/dashboard/summary");
+  const response = await request<{ summary: DashboardSummary }>("/dashboard/summary");
 
   return response.summary;
 }
 
 export async function listPatients(params: Record<string, string> = {}): Promise<{ data: Patient[]; pagination: Pagination }> {
-  return request(`/api/patients${toQuery(params)}`);
+  return request(`/patients${toQuery(params)}`);
 }
 
 export async function createPatient(payload: Partial<Patient>): Promise<Patient> {
   const csrfToken = await getCsrfToken();
-  const response = await request<{ patient: Patient }>("/api/patients", {
+  const response = await request<{ patient: Patient }>("/patients", {
     method: "POST",
     csrfToken,
     body: payload,
@@ -167,14 +167,14 @@ export async function createPatient(payload: Partial<Patient>): Promise<Patient>
 }
 
 export async function getPatient(id: string): Promise<Patient> {
-  const response = await request<{ patient: Patient }>(`/api/patients/${encodeURIComponent(id)}`);
+  const response = await request<{ patient: Patient }>(`/patients/${encodeURIComponent(id)}`);
 
   return response.patient;
 }
 
 export async function updatePatient(id: string, payload: Partial<Patient>): Promise<Patient> {
   const csrfToken = await getCsrfToken();
-  const response = await request<{ patient: Patient }>(`/api/patients/${encodeURIComponent(id)}`, {
+  const response = await request<{ patient: Patient }>(`/patients/${encodeURIComponent(id)}`, {
     method: "PUT",
     csrfToken,
     body: payload,
@@ -186,19 +186,19 @@ export async function updatePatient(id: string, payload: Partial<Patient>): Prom
 export async function archivePatient(id: string): Promise<void> {
   const csrfToken = await getCsrfToken();
 
-  await request<{ status: string }>(`/api/patients/${encodeURIComponent(id)}`, {
+  await request<{ status: string }>(`/patients/${encodeURIComponent(id)}`, {
     method: "DELETE",
     csrfToken,
   });
 }
 
 export async function listMaps(params: Record<string, string> = {}): Promise<{ data: MapDraft[]; pagination: Pagination }> {
-  return request(`/api/maps${toQuery(params)}`);
+  return request(`/maps${toQuery(params)}`);
 }
 
 export async function createMap(payload: Partial<MapDraft>): Promise<MapDraft> {
   const csrfToken = await getCsrfToken();
-  const response = await request<{ map: MapDraft }>("/api/maps", {
+  const response = await request<{ map: MapDraft }>("/maps", {
     method: "POST",
     csrfToken,
     body: payload,
@@ -208,14 +208,14 @@ export async function createMap(payload: Partial<MapDraft>): Promise<MapDraft> {
 }
 
 export async function getMap(id: string): Promise<MapDraft> {
-  const response = await request<{ map: MapDraft }>(`/api/maps/${encodeURIComponent(id)}`);
+  const response = await request<{ map: MapDraft }>(`/maps/${encodeURIComponent(id)}`);
 
   return response.map;
 }
 
 export async function updateMap(id: string, payload: Partial<MapDraft>): Promise<MapDraft> {
   const csrfToken = await getCsrfToken();
-  const response = await request<{ map: MapDraft }>(`/api/maps/${encodeURIComponent(id)}`, {
+  const response = await request<{ map: MapDraft }>(`/maps/${encodeURIComponent(id)}`, {
     method: "PUT",
     csrfToken,
     body: payload,
@@ -227,7 +227,7 @@ export async function updateMap(id: string, payload: Partial<MapDraft>): Promise
 export async function archiveMap(id: string): Promise<void> {
   const csrfToken = await getCsrfToken();
 
-  await request<{ status: string }>(`/api/maps/${encodeURIComponent(id)}`, {
+  await request<{ status: string }>(`/maps/${encodeURIComponent(id)}`, {
     method: "DELETE",
     csrfToken,
   });
