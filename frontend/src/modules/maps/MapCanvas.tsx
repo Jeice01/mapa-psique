@@ -76,6 +76,18 @@ const fields: Array<{ key: keyof MapCanvasData; label: string; help: string; pla
   },
 ];
 
+const historicalPreviewFields: Array<{ key: keyof MapCanvasData; label: string }> = [
+  { key: "main_demand", label: "Demanda principal" },
+  { key: "current_context", label: "Contexto atual" },
+  { key: "emotional_history", label: "História emocional" },
+  { key: "recurring_patterns", label: "Padrões recorrentes" },
+  { key: "core_beliefs", label: "Crenças centrais" },
+  { key: "defense_strategies", label: "Estratégias de defesa" },
+  { key: "internal_resources", label: "Recursos internos" },
+  { key: "reflective_hypotheses", label: "Hipóteses reflexivas" },
+  { key: "next_steps", label: "Próximos passos" },
+];
+
 export function MapCanvas({ map, onSave }: Props) {
   const [canvas, setCanvas] = useState<MapCanvasData>(() => normalizeCanvas(map.canvas_json));
   const [savedCanvas, setSavedCanvas] = useState<MapCanvasData>(() => normalizeCanvas(map.canvas_json));
@@ -215,21 +227,57 @@ export function MapCanvas({ map, onSave }: Props) {
         ) : null}
         {versionDetailsError ? <p className="mt-3 text-sm text-red-700">{versionDetailsError}</p> : null}
         {selectedVersion ? (
-          <div className="mt-4 rounded-md border border-slate-200 bg-white p-3">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-slate-950">Versão {selectedVersion.version_number}</p>
-                <p className="text-xs text-slate-500">{selectedVersion.summary ?? "Snapshot do canvas"}</p>
-              </div>
-              <time className="text-xs text-slate-500">{formatDate(selectedVersion.created_at)}</time>
-            </div>
-            <pre className="mt-3 max-h-64 overflow-auto rounded-md bg-slate-950 p-3 text-xs leading-5 text-slate-100">
-              {formatCanvasData(selectedVersion.canvas_data)}
-            </pre>
-          </div>
+          <HistoricalVersionPreview version={selectedVersion} onClose={() => setSelectedVersion(null)} />
         ) : null}
       </section>
     </form>
+  );
+}
+
+function HistoricalVersionPreview({ version, onClose }: { version: MapCanvasVersionDetails; onClose: () => void }) {
+  const preview = buildHistoricalPreview(version.canvas_data);
+  const historicalCanvas = preview.canvas;
+
+  return (
+    <aside className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4" aria-label="Prévia da versão histórica">
+      <div className="flex flex-col gap-3 border-b border-amber-200 pb-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Prévia da versão histórica</p>
+          <h4 className="mt-1 text-base font-semibold text-slate-950">Versão {version.version_number}</h4>
+          <p className="mt-1 text-sm text-slate-700">{version.summary ?? "Snapshot do canvas"}</p>
+          <p className="mt-2 text-xs font-medium text-amber-800">Visualização somente leitura. Esta prévia não altera o canvas atual.</p>
+        </div>
+        <div className="flex flex-col items-start gap-2 sm:items-end">
+          <time className="text-xs text-slate-600">{formatDate(version.created_at)}</time>
+          <button className="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900" onClick={onClose} type="button">
+            Fechar prévia
+          </button>
+        </div>
+      </div>
+
+      {historicalCanvas ? (
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {historicalPreviewFields.map((field) => (
+            <section className="rounded-md border border-amber-100 bg-white p-3" key={field.key}>
+              <h5 className="text-sm font-semibold text-slate-900">{field.label}</h5>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                {historicalCanvas[field.key].trim() === "" ? "Não preenchido" : historicalCanvas[field.key]}
+              </p>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-md border border-amber-100 bg-white p-3">
+          <p className="text-sm text-slate-700">Dados da versão carregados, mas não foi possível renderizar todos os campos.</p>
+          {preview.technicalPreview ? (
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs font-medium text-slate-600">Prévia técnica limitada</summary>
+              <pre className="mt-2 max-h-48 overflow-auto rounded-md bg-slate-950 p-3 text-xs leading-5 text-slate-100">{preview.technicalPreview}</pre>
+            </details>
+          ) : null}
+        </div>
+      )}
+    </aside>
   );
 }
 
@@ -274,11 +322,31 @@ function formatDate(value: string): string {
   return value;
 }
 
-function formatCanvasData(value: unknown): string {
-  const maxPreviewLength = 6000;
+function buildHistoricalPreview(value: unknown): { canvas: MapCanvasData | null; technicalPreview: string | null } {
+  if (typeof value === "string") {
+    try {
+      return buildHistoricalPreview(JSON.parse(value) as unknown);
+    } catch {
+      return { canvas: null, technicalPreview: limitTechnicalPreview(value) };
+    }
+  }
+
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    return { canvas: normalizeCanvas(value as MapDraft["canvas_json"]), technicalPreview: null };
+  }
+
+  return { canvas: null, technicalPreview: limitTechnicalPreview(value) };
+}
+
+function limitTechnicalPreview(value: unknown): string | null {
+  const maxPreviewLength = 2000;
 
   try {
     const formatted = JSON.stringify(value, null, 2);
+
+    if (formatted === undefined) {
+      return null;
+    }
 
     if (formatted.length > maxPreviewLength) {
       return `${formatted.slice(0, maxPreviewLength)}\n\n...previsualizacao limitada.`;
@@ -286,7 +354,7 @@ function formatCanvasData(value: unknown): string {
 
     return formatted;
   } catch {
-    return "Dados da versao carregados com sucesso.";
+    return null;
   }
 }
 
