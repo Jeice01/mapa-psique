@@ -34,3 +34,43 @@ Pendencia:
 Proxima etapa planejada:
 
 - Implementar Prompt 05: Canvas inicial do Mapa da Psique.
+
+## 2026-07-07 - Prompt 05 validado em producao
+
+Canvas inicial do Mapa da Psique implementado e validado em producao.
+
+Dominio:
+
+```text
+https://mapapsique.orbisconect.com
+```
+
+Validacoes aprovadas:
+
+- Frontend com componente inicial de canvas publicado
+- Runtime PHP em `api/_app` atualizado
+- `PUT /api/maps/{id}` aceita `canvas_json`
+- `canvas_json` persiste no banco
+- `GET /api/maps/{id}` retorna `canvas_json` preenchido
+- CSRF validado no `PUT`
+- Sessao por cookie validada
+- Ownership/RBAC mantidos
+- Webroot runtime mantido protegido
+
+Mapa usado na validacao:
+
+```text
+d4926974-e4f2-4050-8cf8-cae8aebed730
+```
+
+Campos validados no retorno:
+
+```text
+main_demand=Teste canvas apos atualizar runtime
+current_context=Runtime api _app atualizado
+next_steps=Confirmar retorno preenchido no GET
+```
+
+Proxima etapa planejada:
+
+- Evoluir o canvas visual/interativo conforme proximo prompt, sem IA, PDF ou upload ate que essas etapas sejam explicitamente solicitadas.

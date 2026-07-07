@@ -178,6 +178,7 @@ Validado em producao:
 - Cadastro/login com sessao por cookie
 - Criacao real de paciente
 - Criacao real de mapa
+- Canvas inicial salva e recupera `canvas_json`
 - Fluxo de esqueci senha com token por e-mail
 - Deploy automatico via GitHub Actions e SSH
 - Webroot publico protegido
@@ -188,7 +189,7 @@ Pendencia conhecida:
 
 Ainda nao implementado:
 
-- Canvas interativo completo
+- Canvas visual/interativo completo
 - Integração OpenAI
 - Upload real de arquivos
 - PDF
