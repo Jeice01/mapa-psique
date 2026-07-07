@@ -10,6 +10,12 @@ RewriteRule ^backend/(src|migrations|storage)(/|$) - [F,L,NC]
 RewriteRule ^backend/(\.env|\.env\..*|composer\.(json|lock))$ - [F,L,NC]
 RewriteRule ^frontend(/|$) - [F,L,NC]
 
+# Prevent SPA fallback from serving source/build metadata paths as index.html.
+RewriteRule ^(package(-lock)?\.json|pnpm-lock\.yaml|yarn\.lock|composer\.(json|lock))$ - [F,L,NC]
+RewriteRule ^(vite|tailwind|postcss|eslint)\.config\.(js|cjs|mjs|ts)$ - [F,L,NC]
+RewriteRule ^tsconfig([^/]*\.)?json$ - [F,L,NC]
+RewriteRule \.(sql|log|bak|backup|old|orig|save|zip|tar|tgz|7z)$ - [F,L,NC]
+
 RewriteRule ^api($|/) - [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
