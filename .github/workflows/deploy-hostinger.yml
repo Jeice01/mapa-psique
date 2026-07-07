@@ -9,17 +9,32 @@ jobs:
   deploy:
     name: Pull deploy branch on Hostinger
     runs-on: ubuntu-latest
+    env:
+      HOSTINGER_SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+      HOSTINGER_SSH_PORT: ${{ secrets.HOSTINGER_SSH_PORT }}
+      HOSTINGER_SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+      HOSTINGER_SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
 
     steps:
+      - name: Validate SSH secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${HOSTINGER_SSH_HOST}" || { echo "::error::Missing HOSTINGER_SSH_HOST"; exit 1; }
+          test -n "${HOSTINGER_SSH_PORT}" || { echo "::error::Missing HOSTINGER_SSH_PORT"; exit 1; }
+          test -n "${HOSTINGER_SSH_USER}" || { echo "::error::Missing HOSTINGER_SSH_USER"; exit 1; }
+          test -n "${HOSTINGER_SSH_PRIVATE_KEY}" || { echo "::error::Missing HOSTINGER_SSH_PRIVATE_KEY"; exit 1; }
+
       - name: Configure SSH
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}" > ~/.ssh/hostinger_deploy_key
+          printf '%s\n' "${HOSTINGER_SSH_PRIVATE_KEY}" > ~/.ssh/hostinger_deploy_key
           chmod 600 ~/.ssh/hostinger_deploy_key
-          ssh-keyscan -p "${{ secrets.HOSTINGER_SSH_PORT }}" "${{ secrets.HOSTINGER_SSH_HOST }}" >> ~/.ssh/known_hosts
+          echo "Scanning Hostinger SSH host key..."
+          ssh-keyscan -T 20 -H -p "${HOSTINGER_SSH_PORT}" "${HOSTINGER_SSH_HOST}" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
       - name: Deploy on Hostinger
@@ -29,9 +44,9 @@ jobs:
           echo "Starting deploy on Hostinger..."
           ssh \
             -i ~/.ssh/hostinger_deploy_key \
-            -p "${{ secrets.HOSTINGER_SSH_PORT }}" \
+            -p "${HOSTINGER_SSH_PORT}" \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
-            "${{ secrets.HOSTINGER_SSH_USER }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
+            "${HOSTINGER_SSH_USER}@${HOSTINGER_SSH_HOST}" \
             'cd /home/u754689460/domains/mapapsique.orbisconect.com/public_html && git pull origin deploy'
           echo "Deploy completed."
