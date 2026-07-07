@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { register } from "../../shared/api/httpClient";
+import { ApiError, register } from "../../shared/api/httpClient";
 
 type Props = {
   onBackToLogin: () => void;
@@ -38,8 +38,8 @@ export function RegisterPage({ onBackToLogin }: Props) {
       setEmail("");
       setPassword("");
       setConfirmPassword("");
-    } catch {
-      setError("Nao foi possivel criar o cadastro.");
+    } catch (exception) {
+      setError(exception instanceof ApiError ? exception.message : "Nao foi possivel criar o cadastro.");
     } finally {
       setLoading(false);
     }

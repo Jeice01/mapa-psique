@@ -36,13 +36,17 @@ final class AuthService
             $role = 'profissional';
 
             if ($name === '' || $email === '' || $password === '') {
-                throw new InvalidArgumentException('Missing required fields');
+                throw new InvalidArgumentException('Preencha nome, e-mail e senha.');
+            }
+
+            if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                throw new InvalidArgumentException('Informe um e-mail valido.');
             }
 
             self::assertPasswordPolicy($password);
 
             if ($this->users()->findByEmail($email) !== null) {
-                throw new InvalidArgumentException('Email already exists');
+                throw new InvalidArgumentException('Este e-mail ja esta cadastrado.');
             }
 
             $id = $this->users()->create([
@@ -65,6 +69,15 @@ final class AuthService
                 'status' => 'ok',
                 'user' => self::safeUser($user ?? []),
             ];
+        } catch (InvalidArgumentException $exception) {
+            $this->audit('auth.register.validation_failed', 'WARN', null, [
+                'route' => '/api/auth/register',
+                'method' => 'POST',
+                'status_code' => 400,
+                'reason' => $exception->getMessage(),
+            ]);
+
+            throw $exception;
         } catch (Throwable $exception) {
             $this->audit('auth.register.failed', 'WARN', null, [
                 'route' => '/api/auth/register',
@@ -198,7 +211,7 @@ final class AuthService
     private static function assertPasswordPolicy(string $password): void
     {
         if (strlen($password) < 8 || preg_match('/[A-Za-z]/', $password) !== 1 || preg_match('/\d/', $password) !== 1) {
-            throw new InvalidArgumentException('Weak password');
+            throw new InvalidArgumentException('A senha precisa ter pelo menos 8 caracteres, incluindo letras e numeros.');
         }
     }
 
