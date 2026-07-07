@@ -171,3 +171,41 @@ version_number=1
 summary=Snapshot do canvas
 created_at=2026-07-07 20:13:36
 ```
+
+## Checkpoint tecnico - Prompt 08 Recuperar versao especifica do canvas
+
+**Data/hora da validacao:** 07/07/2026 20:40:48 -03:00
+**Commit main:** `809e6ed feat: add canvas version detail endpoint`
+**Commit deploy:** `31f478f deploy: publish canvas version detail endpoint`
+**Ambiente:** Producao Hostinger
+**Dominio:** https://mapapsique.orbisconect.com
+
+Status final: PROMPT 08 VALIDADO EM PRODUCAO.
+
+Resumo implementado:
+
+- Endpoint especifico criado: `GET /api/maps/{id}/canvas-versions/{versionId}`.
+- Recuperacao somente leitura de uma versao especifica do canvas.
+- Retorno do snapshot completo em `canvas_data` apenas no endpoint especifico.
+- Listagem geral do historico preservada sem exposicao de `canvas_data`.
+- Sem restauracao de versao, IA, PDF, upload ou alteracao de banco nesta etapa.
+
+Dados usados na validacao:
+
+```text
+map_id=d4926974-e4f2-4050-8cf8-cae8aebed730
+version_id=a8842fcc-b15c-47ae-a8df-3170be80940f
+```
+
+Validacoes em producao:
+
+- Login via CSRF funcionando.
+- Sessao renovada com sucesso.
+- `/api/auth/me` retornou `HTTP/1.1 200 OK`.
+- Endpoint especifico retornou `HTTP/1.1 200 OK`.
+- Endpoint especifico retornou `success: true`.
+- Endpoint especifico retornou `canvas_data` completo.
+- Endpoint de listagem retornou `HTTP/1.1 200 OK`.
+- Endpoint de listagem retornou `success: true`.
+- Endpoint de listagem retornou apenas metadados.
+- Endpoint de listagem nao retornou `canvas_data`.
