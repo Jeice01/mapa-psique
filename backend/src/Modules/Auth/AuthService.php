@@ -9,6 +9,7 @@ use App\Database\Repositories\ConsentRepository;
 use App\Database\Repositories\UserRepository;
 use App\Security\PasswordHasher;
 use App\Security\SessionManager;
+use App\Support\Logger;
 use InvalidArgumentException;
 use Throwable;
 
@@ -79,6 +80,12 @@ final class AuthService
 
             throw $exception;
         } catch (Throwable $exception) {
+            Logger::warning('auth.register.technical_failure', [
+                'exception' => $exception::class,
+                'code' => (string) $exception->getCode(),
+                'message' => $exception->getMessage(),
+            ]);
+
             $this->audit('auth.register.failed', 'WARN', null, [
                 'route' => '/api/auth/register',
                 'method' => 'POST',
