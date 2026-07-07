@@ -39,6 +39,12 @@ Proxima etapa planejada:
 
 Canvas inicial do Mapa da Psique implementado e validado em producao.
 
+Commit:
+
+```text
+914f8f1 feat: implement initial map canvas
+```
+
 Dominio:
 
 ```text
@@ -48,14 +54,22 @@ https://mapapsique.orbisconect.com
 Validacoes aprovadas:
 
 - Frontend com componente inicial de canvas publicado
+- Frontend buildado com `MapCanvas.tsx`
 - Runtime PHP em `api/_app` atualizado
 - `PUT /api/maps/{id}` aceita `canvas_json`
+- `MapRepository` persiste `canvas_json`
 - `canvas_json` persiste no banco
 - `GET /api/maps/{id}` retorna `canvas_json` preenchido
 - CSRF validado no `PUT`
 - Sessao por cookie validada
 - Ownership/RBAC mantidos
 - Webroot runtime mantido protegido
+- Sem IA, PDF, upload ou dependencias novas
+
+Status:
+
+- Backend em producao aprovado
+- Teste visual pendente/aprovado conforme validacao no navegador
 
 Mapa usado na validacao:
 
