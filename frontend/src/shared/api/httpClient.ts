@@ -79,6 +79,14 @@ export type MapCanvasVersionDetails = MapCanvasVersion & {
   canvas_data: unknown;
 };
 
+export type RestoreMapCanvasVersionResult = {
+  map_id: string;
+  restored_version_id: string;
+  restored_version_number: number;
+  backup_version_id: string;
+  backup_version_number: number;
+};
+
 type Pagination = {
   page: number;
   per_page: number;
@@ -287,6 +295,19 @@ export async function listMapCanvasVersions(id: string): Promise<MapCanvasVersio
 export async function getMapCanvasVersion(mapId: string, versionId: string): Promise<MapCanvasVersionDetails> {
   const response = await request<{ success: boolean; data: MapCanvasVersionDetails }>(
     `/maps/${encodeURIComponent(mapId)}/canvas-versions/${encodeURIComponent(versionId)}`
+  );
+
+  return response.data;
+}
+
+export async function restoreMapCanvasVersion(mapId: string, versionId: string): Promise<RestoreMapCanvasVersionResult> {
+  const csrfToken = await getCsrfToken();
+  const response = await request<{ success: boolean; message: string; data: RestoreMapCanvasVersionResult }>(
+    `/maps/${encodeURIComponent(mapId)}/canvas-versions/${encodeURIComponent(versionId)}/restore`,
+    {
+      method: "POST",
+      csrfToken,
+    }
   );
 
   return response.data;

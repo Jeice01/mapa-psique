@@ -1,6 +1,6 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { getMapCanvasVersion, listMapCanvasVersions } from "../../shared/api/httpClient";
-import type { MapCanvasData, MapCanvasVersion, MapCanvasVersionDetails, MapDraft } from "../../shared/api/httpClient";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { getMap, getMapCanvasVersion, listMapCanvasVersions, restoreMapCanvasVersion } from "../../shared/api/httpClient";
+import type { MapCanvasData, MapCanvasVersion, MapCanvasVersionDetails, MapDraft, RestoreMapCanvasVersionResult } from "../../shared/api/httpClient";
 
 type Props = {
   map: MapDraft;
@@ -97,6 +97,10 @@ export function MapCanvas({ map, onSave }: Props) {
   const [selectedVersion, setSelectedVersion] = useState<MapCanvasVersionDetails | null>(null);
   const [versionDetailsLoadingId, setVersionDetailsLoadingId] = useState<string | null>(null);
   const [versionDetailsError, setVersionDetailsError] = useState<string | null>(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [restoreResult, setRestoreResult] = useState<RestoreMapCanvasVersionResult | null>(null);
+  const restoreInFlightRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
   const isDirty = serializeCanvas(canvas) !== serializeCanvas(savedCanvas);
@@ -121,6 +125,8 @@ export function MapCanvas({ map, onSave }: Props) {
     setSaveState("idle");
     setSelectedVersion(null);
     setVersionDetailsError(null);
+    setRestoreError(null);
+    setRestoreResult(null);
   }, [map.canvas_json, map.id]);
 
   useEffect(() => {
@@ -154,10 +160,45 @@ export function MapCanvas({ map, onSave }: Props) {
 
     try {
       setSelectedVersion(await getMapCanvasVersion(map.id, versionId));
+      setRestoreError(null);
+      setRestoreResult(null);
     } catch {
       setVersionDetailsError("Nao foi possivel carregar os detalhes da versao.");
     } finally {
       setVersionDetailsLoadingId(null);
+    }
+  }
+
+  async function handleRestoreVersion(versionId: string) {
+    if (restoreInFlightRef.current) {
+      return;
+    }
+
+    restoreInFlightRef.current = true;
+    setRestoreLoading(true);
+    setRestoreError(null);
+    setRestoreResult(null);
+
+    try {
+      const result = await restoreMapCanvasVersion(map.id, versionId);
+      setRestoreResult(result);
+
+      try {
+        const restoredMap = await getMap(map.id);
+        const restoredCanvas = normalizeCanvas(restoredMap.canvas_json);
+
+        setCanvas(restoredCanvas);
+        setSavedCanvas(restoredCanvas);
+        setSaveState("saved");
+        await loadVersions();
+      } catch {
+        setRestoreError("Versao restaurada, mas nao foi possivel recarregar o canvas atualizado. Reabra o mapa para conferir.");
+      }
+    } catch {
+      setRestoreError("Nao foi possivel restaurar esta versao. O canvas atual foi mantido.");
+    } finally {
+      restoreInFlightRef.current = false;
+      setRestoreLoading(false);
     }
   }
 
@@ -227,16 +268,44 @@ export function MapCanvas({ map, onSave }: Props) {
         ) : null}
         {versionDetailsError ? <p className="mt-3 text-sm text-red-700">{versionDetailsError}</p> : null}
         {selectedVersion ? (
-          <HistoricalVersionPreview version={selectedVersion} onClose={() => setSelectedVersion(null)} />
+          <HistoricalVersionPreview
+            restoreError={restoreError}
+            restoreLoading={restoreLoading}
+            restoreResult={restoreResult}
+            version={selectedVersion}
+            onClose={() => setSelectedVersion(null)}
+            onRestore={() => void handleRestoreVersion(selectedVersion.id)}
+          />
         ) : null}
       </section>
     </form>
   );
 }
 
-function HistoricalVersionPreview({ version, onClose }: { version: MapCanvasVersionDetails; onClose: () => void }) {
+function HistoricalVersionPreview({
+  restoreError,
+  restoreLoading,
+  restoreResult,
+  version,
+  onClose,
+  onRestore,
+}: {
+  restoreError: string | null;
+  restoreLoading: boolean;
+  restoreResult: RestoreMapCanvasVersionResult | null;
+  version: MapCanvasVersionDetails;
+  onClose: () => void;
+  onRestore: () => void;
+}) {
   const preview = buildHistoricalPreview(version.canvas_data);
   const historicalCanvas = preview.canvas;
+  const [showRestoreConfirmation, setShowRestoreConfirmation] = useState(false);
+
+  useEffect(() => {
+    if (restoreResult) {
+      setShowRestoreConfirmation(false);
+    }
+  }, [restoreResult]);
 
   return (
     <aside className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4" aria-label="Prévia da versão histórica">
@@ -249,11 +318,56 @@ function HistoricalVersionPreview({ version, onClose }: { version: MapCanvasVers
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <time className="text-xs text-slate-600">{formatDate(version.created_at)}</time>
-          <button className="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900" onClick={onClose} type="button">
-            Fechar prévia
-          </button>
+          <div className="flex flex-wrap justify-start gap-2 sm:justify-end">
+            <button
+              className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={restoreLoading}
+              onClick={() => setShowRestoreConfirmation(true)}
+              type="button"
+            >
+              Restaurar esta versão
+            </button>
+            <button className="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900" disabled={restoreLoading} onClick={onClose} type="button">
+              Fechar prévia
+            </button>
+          </div>
         </div>
       </div>
+
+      {showRestoreConfirmation ? (
+        <div className="mt-4 rounded-md border border-red-200 bg-white p-3">
+          <h5 className="text-sm font-semibold text-red-900">Confirmar restauração</h5>
+          <p className="mt-2 text-sm leading-6 text-slate-700">
+            Esta ação substituirá o canvas atual pelo conteúdo desta versão histórica. Um backup automático do canvas atual será criado antes da restauração, e o histórico será preservado.
+            Confira com cuidado antes de continuar.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              className="rounded-md bg-red-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={restoreLoading}
+              onClick={onRestore}
+              type="button"
+            >
+              {restoreLoading ? "Restaurando..." : "Confirmar restauração"}
+            </button>
+            <button
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={restoreLoading}
+              onClick={() => setShowRestoreConfirmation(false)}
+              type="button"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {restoreResult ? (
+        <p className="mt-4 rounded-md border border-brand-200 bg-brand-50 p-3 text-sm font-medium text-brand-800">
+          Versão restaurada com sucesso. Backup automático criado como versão {restoreResult.backup_version_number}.
+        </p>
+      ) : null}
+      {restoreError ? <p className="mt-4 rounded-md border border-red-200 bg-white p-3 text-sm font-medium text-red-700">{restoreError}</p> : null}
 
       {historicalCanvas ? (
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
