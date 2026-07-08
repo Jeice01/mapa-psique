@@ -159,6 +159,22 @@ final class MapService
         return $version;
     }
 
+    /**
+     * @return array<string,mixed>
+     */
+    public function restoreCanvasVersion(string $id, string $versionId, string $ownerUserId): array
+    {
+        if ($this->maps->findByIdAndOwner($id, $ownerUserId) === null) {
+            throw new InvalidArgumentException('Map not found');
+        }
+
+        if ($this->maps->findCanvasVersionById($id, $versionId) === null) {
+            throw new InvalidArgumentException('Canvas version not found');
+        }
+
+        return $this->maps->restoreCanvasFromVersion($id, $ownerUserId, $versionId, $ownerUserId);
+    }
+
     public function archive(string $id, string $ownerUserId, string $deletedBy): void
     {
         if (!$this->maps->softDeleteByOwner($id, $ownerUserId, $deletedBy)) {

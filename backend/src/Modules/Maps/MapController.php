@@ -130,6 +130,30 @@ final class MapController
         }
     }
 
+    public function restoreCanvasVersion(string $id, string $versionId): JsonResponse
+    {
+        $session = $this->guardMutable();
+
+        if ($session instanceof JsonResponse) {
+            return $session;
+        }
+
+        try {
+            $result = (new MapService())->restoreCanvasVersion($id, $versionId, $session['user_id']);
+            Audit::record('map.canvas_version_restored', $session['user_id'], 'maps', $id, ['status_code' => 200]);
+
+            return JsonResponse::ok([
+                'success' => true,
+                'message' => 'Versão restaurada com sucesso.',
+                'data' => $result,
+            ]);
+        } catch (InvalidArgumentException) {
+            return JsonResponse::error('Canvas version not found', 404);
+        } catch (Throwable) {
+            return JsonResponse::error('Could not restore canvas version', 500);
+        }
+    }
+
     public function update(string $id): JsonResponse
     {
         $session = $this->guardMutable();
