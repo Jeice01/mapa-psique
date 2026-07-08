@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { getMap, getMapCanvasVersion, listMapCanvasVersions, restoreMapCanvasVersion } from "../../shared/api/httpClient";
+import { exportMapPdf, getMap, getMapCanvasVersion, listMapCanvasVersions, restoreMapCanvasVersion } from "../../shared/api/httpClient";
 import type { MapCanvasData, MapCanvasVersion, MapCanvasVersionDetails, MapDraft, RestoreMapCanvasVersionResult } from "../../shared/api/httpClient";
 
 type Props = {
@@ -103,6 +103,9 @@ export function MapCanvas({ map, onSave }: Props) {
   const restoreInFlightRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportPdfMessage, setExportPdfMessage] = useState<string | null>(null);
+  const [exportPdfError, setExportPdfError] = useState<string | null>(null);
   const isDirty = serializeCanvas(canvas) !== serializeCanvas(savedCanvas);
 
   const loadVersions = useCallback(async () => {
@@ -120,6 +123,7 @@ export function MapCanvas({ map, onSave }: Props) {
 
   useEffect(() => {
     const normalizedCanvas = normalizeCanvas(map.canvas_json);
+
     setCanvas(normalizedCanvas);
     setSavedCanvas(normalizedCanvas);
     setSaveState("idle");
@@ -127,6 +131,8 @@ export function MapCanvas({ map, onSave }: Props) {
     setVersionDetailsError(null);
     setRestoreError(null);
     setRestoreResult(null);
+    setExportPdfMessage(null);
+    setExportPdfError(null);
   }, [map.canvas_json, map.id]);
 
   useEffect(() => {
@@ -202,6 +208,31 @@ export function MapCanvas({ map, onSave }: Props) {
     }
   }
 
+  const handleExportPdf = useCallback(async () => {
+    setExportingPdf(true);
+    setExportPdfError(null);
+    setExportPdfMessage(null);
+
+    try {
+      const { blob, filename } = await exportMapPdf(map.id);
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+
+      setExportPdfMessage("PDF gerado com sucesso.");
+    } catch {
+      setExportPdfError("Não foi possível exportar o PDF agora.");
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [map.id]);
+
   return (
     <form className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-5" onSubmit={handleSubmit}>
       <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
@@ -209,15 +240,38 @@ export function MapCanvas({ map, onSave }: Props) {
           <h3 className="text-base font-semibold text-slate-950">Canvas do Mapa da Psiquê</h3>
           <p className="mt-1 max-w-2xl text-sm text-slate-600">Registro reflexivo estruturado para organizar a leitura inicial do mapa.</p>
         </div>
+
         <div className="flex flex-col items-start gap-2 sm:items-end">
-          <span className={statusClassName(isDirty, saveState)}>
-            {saving ? "Salvando..." : statusText(isDirty, saveState)}
-          </span>
-          <button className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={saving || !isDirty} type="submit">
-            {saving ? "Salvando..." : "Salvar canvas"}
-          </button>
+          <span className={statusClassName(isDirty, saveState)}>{saving ? "Salvando..." : statusText(isDirty, saveState)}</span>
+
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            <button
+              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={exportingPdf}
+              onClick={() => void handleExportPdf()}
+              type="button"
+            >
+              {exportingPdf ? "Gerando PDF..." : "Exportar PDF"}
+            </button>
+
+            <button
+              className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={saving || !isDirty}
+              type="submit"
+            >
+              {saving ? "Salvando..." : "Salvar canvas"}
+            </button>
+          </div>
         </div>
       </div>
+
+      {exportPdfMessage ? (
+        <p className="mt-3 rounded-md border border-brand-200 bg-brand-50 p-3 text-sm font-medium text-brand-800">{exportPdfMessage}</p>
+      ) : null}
+
+      {exportPdfError ? (
+        <p className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{exportPdfError}</p>
+      ) : null}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         {fields.map((field) => (
@@ -239,10 +293,13 @@ export function MapCanvas({ map, onSave }: Props) {
           <h4 className="text-sm font-semibold text-slate-950">Histórico do canvas</h4>
           {versionsLoading ? <span className="text-xs text-slate-500">Carregando histórico do canvas...</span> : null}
         </div>
+
         {versionsError ? <p className="mt-2 text-sm text-red-700">{versionsError}</p> : null}
+
         {!versionsLoading && versions.length === 0 && !versionsError ? (
           <p className="mt-2 text-sm text-slate-500">Nenhuma versão salva ainda. Ao salvar o canvas, o histórico será criado automaticamente.</p>
         ) : null}
+
         {versions.length > 0 ? (
           <div className="mt-3 overflow-hidden rounded-md border border-slate-200 bg-white">
             {versions.map((version) => {
@@ -264,6 +321,7 @@ export function MapCanvas({ map, onSave }: Props) {
                     <p className="mt-1 text-xs text-slate-600">{version.summary ?? "Snapshot do canvas"}</p>
                     <p className="mt-1 text-xs text-slate-500">Criada em {formatDate(version.created_at)}</p>
                   </div>
+
                   <div className="flex flex-wrap items-center gap-3">
                     <button
                       className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
@@ -279,8 +337,10 @@ export function MapCanvas({ map, onSave }: Props) {
             })}
           </div>
         ) : null}
+
         {versionDetailsLoadingId ? <p className="mt-3 text-sm text-slate-500">Carregando prévia da versão...</p> : null}
         {versionDetailsError ? <p className="mt-3 text-sm text-red-700">{versionDetailsError}</p> : null}
+
         {selectedVersion ? (
           <HistoricalVersionPreview
             restoreError={restoreError}
@@ -342,9 +402,11 @@ function HistoricalVersionPreview({
             <p>Use Restaurar esta versão apenas se desejar substituir o canvas atual.</p>
           </div>
         </div>
+
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <time className="text-xs text-slate-600">Criada em {formatDate(version.created_at)}</time>
           <span className={versionKindClassName(version.summary)}>{versionKindLabel(version.summary)}</span>
+
           <div className="flex flex-wrap justify-start gap-2 sm:justify-end">
             <button
               className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
@@ -354,7 +416,13 @@ function HistoricalVersionPreview({
             >
               Restaurar esta versão
             </button>
-            <button className="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900" disabled={restoreLoading} onClick={onClose} type="button">
+
+            <button
+              className="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900"
+              disabled={restoreLoading}
+              onClick={onClose}
+              type="button"
+            >
               Fechar prévia
             </button>
           </div>
@@ -369,6 +437,7 @@ function HistoricalVersionPreview({
             <p>Antes da restauração, o sistema criará automaticamente um backup do canvas atual.</p>
             <p>Você poderá encontrar esse backup no histórico.</p>
           </div>
+
           <label className="mt-3 block text-sm font-medium text-slate-800">
             Digite RESTAURAR para habilitar a confirmação.
             <input
@@ -379,7 +448,9 @@ function HistoricalVersionPreview({
               value={restoreConfirmationText}
             />
           </label>
+
           {restoreLoading ? <p className="mt-3 text-sm font-medium text-red-800">Restaurando versão e criando backup automático...</p> : null}
+
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               className="rounded-md bg-red-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
@@ -389,6 +460,7 @@ function HistoricalVersionPreview({
             >
               {restoreLoading ? "Restaurando..." : "Confirmar restauração"}
             </button>
+
             <button
               className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={restoreLoading}
@@ -409,6 +481,7 @@ function HistoricalVersionPreview({
           Versão restaurada com sucesso. Backup automático criado como versão {restoreResult.backup_version_number}.
         </p>
       ) : null}
+
       {restoreError ? <p className="mt-4 rounded-md border border-red-200 bg-white p-3 text-sm font-medium text-red-700">{restoreError}</p> : null}
 
       {historicalCanvas ? (

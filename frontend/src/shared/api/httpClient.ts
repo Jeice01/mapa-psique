@@ -87,6 +87,11 @@ export type RestoreMapCanvasVersionResult = {
   backup_version_number: number;
 };
 
+export type ExportMapPdfResult = {
+  blob: Blob;
+  filename: string;
+};
+
 type Pagination = {
   page: number;
   per_page: number;
@@ -313,6 +318,35 @@ export async function restoreMapCanvasVersion(mapId: string, versionId: string):
   return response.data;
 }
 
+export async function exportMapPdf(mapId: string): Promise<ExportMapPdfResult> {
+  const response = await fetch(`${apiBaseUrl}/maps/${encodeURIComponent(mapId)}/export/pdf`, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      Accept: "application/pdf",
+    },
+  });
+
+  if (!response.ok) {
+    let message = "Não foi possível exportar o PDF agora.";
+
+    try {
+      const data = (await response.json()) as ApiErrorPayload;
+      message = data.message ?? data.error ?? message;
+    } catch {
+      // PDF endpoint may not return JSON on failure.
+    }
+
+    throw new ApiError(message, response.status);
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition");
+  const filename = getFilenameFromContentDisposition(disposition) ?? `mapa-psique-${mapId}.pdf`;
+
+  return { blob, filename };
+}
+
 export async function archiveMap(id: string): Promise<void> {
   const csrfToken = await getCsrfToken();
 
@@ -362,4 +396,20 @@ function toQuery(params: Record<string, string>): string {
   const text = query.toString();
 
   return text === "" ? "" : `?${text}`;
+}
+
+function getFilenameFromContentDisposition(disposition: string | null): string | null {
+  if (!disposition) {
+    return null;
+  }
+
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1].replace(/["]/g, ""));
+  }
+
+  const filenameMatch = disposition.match(/filename="?([^"]+)"?/i);
+
+  return filenameMatch?.[1] ?? null;
 }
