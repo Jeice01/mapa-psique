@@ -112,7 +112,7 @@ export function MapCanvas({ map, onSave }: Props) {
     try {
       setVersions(await listMapCanvasVersions(map.id));
     } catch {
-      setVersionsError("Nao foi possivel carregar o historico do canvas.");
+      setVersionsError("Não foi possível carregar o histórico agora.");
     } finally {
       setVersionsLoading(false);
     }
@@ -163,14 +163,14 @@ export function MapCanvas({ map, onSave }: Props) {
       setRestoreError(null);
       setRestoreResult(null);
     } catch {
-      setVersionDetailsError("Nao foi possivel carregar os detalhes da versao.");
+      setVersionDetailsError("Não foi possível carregar os detalhes desta versão.");
     } finally {
       setVersionDetailsLoadingId(null);
     }
   }
 
   async function handleRestoreVersion(versionId: string) {
-    if (restoreInFlightRef.current) {
+    if (restoreInFlightRef.current || restoreLoading || !selectedVersion || selectedVersion.id !== versionId) {
       return;
     }
 
@@ -192,10 +192,10 @@ export function MapCanvas({ map, onSave }: Props) {
         setSaveState("saved");
         await loadVersions();
       } catch {
-        setRestoreError("Versao restaurada, mas nao foi possivel recarregar o canvas atualizado. Reabra o mapa para conferir.");
+        setRestoreError("Versão restaurada, mas não foi possível recarregar o canvas atualizado. Reabra o mapa para conferir.");
       }
     } catch {
-      setRestoreError("Nao foi possivel restaurar esta versao. O canvas atual foi mantido.");
+      setRestoreError("Não foi possível restaurar esta versão. Nenhuma alteração foi aplicada.");
     } finally {
       restoreInFlightRef.current = false;
       setRestoreLoading(false);
@@ -237,35 +237,49 @@ export function MapCanvas({ map, onSave }: Props) {
       <section className="mt-5 border-t border-slate-200 pt-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h4 className="text-sm font-semibold text-slate-950">Histórico do canvas</h4>
-          {versionsLoading ? <span className="text-xs text-slate-500">Carregando histórico...</span> : null}
+          {versionsLoading ? <span className="text-xs text-slate-500">Carregando histórico do canvas...</span> : null}
         </div>
         {versionsError ? <p className="mt-2 text-sm text-red-700">{versionsError}</p> : null}
         {!versionsLoading && versions.length === 0 && !versionsError ? (
-          <p className="mt-2 text-sm text-slate-500">Nenhuma versão salva ainda.</p>
+          <p className="mt-2 text-sm text-slate-500">Nenhuma versão salva ainda. Ao salvar o canvas, o histórico será criado automaticamente.</p>
         ) : null}
         {versions.length > 0 ? (
           <div className="mt-3 overflow-hidden rounded-md border border-slate-200 bg-white">
-            {versions.map((version) => (
-              <div className="flex flex-col gap-1 border-b border-slate-100 px-3 py-2 last:border-0 sm:flex-row sm:items-center sm:justify-between" key={version.id}>
-                <div>
-                  <p className="text-sm font-medium text-slate-900">Versão {version.version_number}</p>
-                  <p className="text-xs text-slate-500">{version.summary ?? "Snapshot do canvas"}</p>
+            {versions.map((version) => {
+              const isSelected = selectedVersion?.id === version.id;
+
+              return (
+                <div
+                  className={`flex flex-col gap-3 border-b px-3 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between ${
+                    isSelected ? "border-brand-100 bg-brand-50" : "border-slate-100"
+                  }`}
+                  key={version.id}
+                >
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-slate-900">Versão {version.version_number}</p>
+                      <span className={versionKindClassName(version.summary)}>{versionKindLabel(version.summary)}</span>
+                      {isSelected ? <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-brand-700">Em prévia</span> : null}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-600">{version.summary ?? "Snapshot do canvas"}</p>
+                    <p className="mt-1 text-xs text-slate-500">Criada em {formatDate(version.created_at)}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={versionDetailsLoadingId === version.id}
+                      onClick={() => void handleViewVersion(version.id)}
+                      type="button"
+                    >
+                      {versionDetailsLoadingId === version.id ? "Carregando prévia..." : "Ver detalhes"}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <time className="text-xs text-slate-500">{formatDate(version.created_at)}</time>
-                  <button
-                    className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={versionDetailsLoadingId === version.id}
-                    onClick={() => void handleViewVersion(version.id)}
-                    type="button"
-                  >
-                    {versionDetailsLoadingId === version.id ? "Carregando..." : "Ver detalhes"}
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : null}
+        {versionDetailsLoadingId ? <p className="mt-3 text-sm text-slate-500">Carregando prévia da versão...</p> : null}
         {versionDetailsError ? <p className="mt-3 text-sm text-red-700">{versionDetailsError}</p> : null}
         {selectedVersion ? (
           <HistoricalVersionPreview
@@ -300,12 +314,20 @@ function HistoricalVersionPreview({
   const preview = buildHistoricalPreview(version.canvas_data);
   const historicalCanvas = preview.canvas;
   const [showRestoreConfirmation, setShowRestoreConfirmation] = useState(false);
+  const [restoreConfirmationText, setRestoreConfirmationText] = useState("");
+  const canConfirmRestore = restoreConfirmationText === "RESTAURAR";
 
   useEffect(() => {
     if (restoreResult) {
       setShowRestoreConfirmation(false);
+      setRestoreConfirmationText("");
     }
   }, [restoreResult]);
+
+  useEffect(() => {
+    setShowRestoreConfirmation(false);
+    setRestoreConfirmationText("");
+  }, [version.id]);
 
   return (
     <aside className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4" aria-label="Prévia da versão histórica">
@@ -314,10 +336,15 @@ function HistoricalVersionPreview({
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Prévia da versão histórica</p>
           <h4 className="mt-1 text-base font-semibold text-slate-950">Versão {version.version_number}</h4>
           <p className="mt-1 text-sm text-slate-700">{version.summary ?? "Snapshot do canvas"}</p>
-          <p className="mt-2 text-xs font-medium text-amber-800">Visualização somente leitura. Esta prévia não altera o canvas atual.</p>
+          <div className="mt-2 space-y-1 text-xs font-medium text-amber-900">
+            <p>Visualização somente leitura.</p>
+            <p>Esta prévia não altera o canvas atual.</p>
+            <p>Use Restaurar esta versão apenas se desejar substituir o canvas atual.</p>
+          </div>
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
-          <time className="text-xs text-slate-600">{formatDate(version.created_at)}</time>
+          <time className="text-xs text-slate-600">Criada em {formatDate(version.created_at)}</time>
+          <span className={versionKindClassName(version.summary)}>{versionKindLabel(version.summary)}</span>
           <div className="flex flex-wrap justify-start gap-2 sm:justify-end">
             <button
               className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
@@ -336,15 +363,27 @@ function HistoricalVersionPreview({
 
       {showRestoreConfirmation ? (
         <div className="mt-4 rounded-md border border-red-200 bg-white p-3">
-          <h5 className="text-sm font-semibold text-red-900">Confirmar restauração</h5>
-          <p className="mt-2 text-sm leading-6 text-slate-700">
-            Esta ação substituirá o canvas atual pelo conteúdo desta versão histórica. Um backup automático do canvas atual será criado antes da restauração, e o histórico será preservado.
-            Confira com cuidado antes de continuar.
-          </p>
+          <h5 className="text-sm font-semibold text-red-900">Confirmar restauração da versão</h5>
+          <div className="mt-2 space-y-2 text-sm leading-6 text-slate-700">
+            <p>O canvas atual será substituído pelo conteúdo desta versão histórica.</p>
+            <p>Antes da restauração, o sistema criará automaticamente um backup do canvas atual.</p>
+            <p>Você poderá encontrar esse backup no histórico.</p>
+          </div>
+          <label className="mt-3 block text-sm font-medium text-slate-800">
+            Digite RESTAURAR para habilitar a confirmação.
+            <input
+              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none focus:border-red-500"
+              disabled={restoreLoading}
+              onChange={(event) => setRestoreConfirmationText(event.target.value)}
+              placeholder="RESTAURAR"
+              value={restoreConfirmationText}
+            />
+          </label>
+          {restoreLoading ? <p className="mt-3 text-sm font-medium text-red-800">Restaurando versão e criando backup automático...</p> : null}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               className="rounded-md bg-red-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={restoreLoading}
+              disabled={restoreLoading || !canConfirmRestore}
               onClick={onRestore}
               type="button"
             >
@@ -353,7 +392,10 @@ function HistoricalVersionPreview({
             <button
               className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={restoreLoading}
-              onClick={() => setShowRestoreConfirmation(false)}
+              onClick={() => {
+                setShowRestoreConfirmation(false);
+                setRestoreConfirmationText("");
+              }}
               type="button"
             >
               Cancelar
@@ -433,7 +475,40 @@ function formatDate(value: string): string {
     return "-";
   }
 
-  return value;
+  const normalizedValue = value.includes("T") ? value : value.replace(" ", "T");
+  const date = new Date(normalizedValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function isAutomaticBackup(summary?: string | null): boolean {
+  const normalizedSummary = (summary ?? "").toLowerCase();
+
+  return normalizedSummary.includes("backup") || normalizedSummary.includes("restauracao") || normalizedSummary.includes("restauração");
+}
+
+function versionKindLabel(summary?: string | null): string {
+  return isAutomaticBackup(summary) ? "Backup automático" : "Snapshot do canvas";
+}
+
+function versionKindClassName(summary?: string | null): string {
+  const baseClassName = "rounded-full px-2 py-0.5 text-xs font-medium";
+
+  if (isAutomaticBackup(summary)) {
+    return `${baseClassName} bg-red-50 text-red-700`;
+  }
+
+  return `${baseClassName} bg-slate-100 text-slate-700`;
 }
 
 function buildHistoricalPreview(value: unknown): { canvas: MapCanvasData | null; technicalPreview: string | null } {
