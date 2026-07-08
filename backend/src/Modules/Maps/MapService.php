@@ -175,6 +175,19 @@ final class MapService
         return $this->maps->restoreCanvasFromVersion($id, $ownerUserId, $versionId, $ownerUserId);
     }
 
+    /**
+     * @return array{filename:string,content:string}
+     */
+    public function exportPdf(string $id, string $ownerUserId): array
+    {
+        $map = $this->find($id, $ownerUserId);
+
+        return [
+            'filename' => sprintf('mapa-psique-%s.pdf', preg_replace('/[^a-zA-Z0-9_-]/', '-', $id) ?? 'mapa'),
+            'content' => (new MapPdfExporter())->export($map),
+        ];
+    }
+
     public function archive(string $id, string $ownerUserId, string $deletedBy): void
     {
         if (!$this->maps->softDeleteByOwner($id, $ownerUserId, $deletedBy)) {

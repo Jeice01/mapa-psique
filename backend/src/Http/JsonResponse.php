@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-final class JsonResponse
+final class JsonResponse implements ResponseInterface
 {
     /**
      * @param array<string, mixed> $payload

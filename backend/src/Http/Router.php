@@ -43,7 +43,7 @@ final class Router
         $this->routes['DELETE'][$path] = $handler;
     }
 
-    public function dispatch(string $method, string $path): ?JsonResponse
+    public function dispatch(string $method, string $path): ?ResponseInterface
     {
         $match = $this->match($method, $path);
 
