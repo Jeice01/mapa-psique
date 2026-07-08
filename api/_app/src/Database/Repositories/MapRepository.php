@@ -8,6 +8,8 @@ use App\Database\Connection;
 use App\Support\Uuid;
 use InvalidArgumentException;
 use PDO;
+use RuntimeException;
+use Throwable;
 
 final class MapRepository
 {
@@ -191,8 +193,9 @@ final class MapRepository
 
     /**
      * @param array<string, mixed>|string $canvasData
+     * @return array{id:string,version_number:int}
      */
-    public function createCanvasVersion(string $mapId, ?string $userId, array|string $canvasData, ?string $summary = null): void
+    public function createCanvasVersion(string $mapId, ?string $userId, array|string $canvasData, ?string $summary = null): array
     {
         $encodedCanvas = is_array($canvasData)
             ? json_encode($canvasData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
@@ -210,6 +213,7 @@ final class MapRepository
         $versionStatement->execute(['map_id' => $mapId]);
         $lastVersion = $versionStatement->fetchColumn();
         $nextVersion = ((int) $lastVersion) + 1;
+        $id = Uuid::v4();
 
         $statement = $this->pdo->prepare(
             'INSERT INTO map_canvas_versions (id, map_id, user_id, version_number, canvas_data, summary, created_at)
@@ -217,13 +221,18 @@ final class MapRepository
         );
 
         $statement->execute([
-            'id' => Uuid::v4(),
+            'id' => $id,
             'map_id' => $mapId,
             'user_id' => $userId,
             'version_number' => $nextVersion,
             'canvas_data' => $encodedCanvas,
             'summary' => $summary,
         ]);
+
+        return [
+            'id' => $id,
+            'version_number' => $nextVersion,
+        ];
     }
 
     /**
@@ -261,6 +270,83 @@ final class MapRepository
         $version = $statement->fetch();
 
         return is_array($version) ? $version : null;
+    }
+
+    /**
+     * @return array{map_id:string,restored_version_id:string,restored_version_number:int,backup_version_id:string,backup_version_number:int}
+     */
+    public function restoreCanvasFromVersion(string $mapId, string $ownerUserId, string $versionId, string $userId): array
+    {
+        $this->beginTransaction();
+
+        try {
+            $mapStatement = $this->pdo->prepare(
+                'SELECT canvas_json
+                 FROM maps
+                 WHERE id = :map_id
+                   AND owner_user_id = :owner_user_id
+                   AND deleted_at IS NULL
+                 LIMIT 1
+                 FOR UPDATE'
+            );
+            $mapStatement->execute([
+                'map_id' => $mapId,
+                'owner_user_id' => $ownerUserId,
+            ]);
+            $map = $mapStatement->fetch();
+
+            if (!is_array($map)) {
+                throw new InvalidArgumentException('Map not found');
+            }
+
+            $version = $this->findCanvasVersionById($mapId, $versionId);
+
+            if ($version === null) {
+                throw new InvalidArgumentException('Canvas version not found');
+            }
+
+            $restoredCanvas = (string) $version['canvas_data'];
+            json_decode($restoredCanvas, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new RuntimeException('Invalid canvas data');
+            }
+
+            $backup = $this->createCanvasVersion(
+                $mapId,
+                $userId,
+                (string) ($map['canvas_json'] ?? 'null'),
+                'Snapshot automático antes da restauração'
+            );
+
+            $updateStatement = $this->pdo->prepare(
+                'UPDATE maps
+                 SET canvas_json = :canvas_json,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = :map_id
+                   AND owner_user_id = :owner_user_id
+                   AND deleted_at IS NULL'
+            );
+            $updateStatement->execute([
+                'canvas_json' => $restoredCanvas,
+                'map_id' => $mapId,
+                'owner_user_id' => $ownerUserId,
+            ]);
+
+            $this->commit();
+
+            return [
+                'map_id' => $mapId,
+                'restored_version_id' => (string) $version['id'],
+                'restored_version_number' => (int) $version['version_number'],
+                'backup_version_id' => $backup['id'],
+                'backup_version_number' => $backup['version_number'],
+            ];
+        } catch (Throwable $exception) {
+            $this->rollBack();
+
+            throw $exception;
+        }
     }
 
     public function softDeleteByOwner(string $id, string $ownerUserId, string $deletedBy): bool
