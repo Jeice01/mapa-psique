@@ -209,3 +209,48 @@ Validacoes em producao:
 - Endpoint de listagem retornou `success: true`.
 - Endpoint de listagem retornou apenas metadados.
 - Endpoint de listagem nao retornou `canvas_data`.
+
+## Checkpoint tecnico - Prompt 09 Preview visual de versao historica
+
+**Data/hora da validacao:** 07/07/2026 21:27:34 -03:00
+**Commit main:** `2a341d7 feat: add visual preview for canvas versions`
+**Commit deploy:** `0310b4f deploy: publish visual preview for canvas versions`
+**Ambiente:** Producao Hostinger
+**Dominio:** https://mapapsique.orbisconect.com
+
+Status final: PROMPT 09 VALIDADO EM PRODUCAO.
+
+Objetivo do prompt:
+
+- Exibir uma previa visual e organizada de uma versao historica do canvas.
+- Usar o endpoint existente `GET /api/maps/{id}/canvas-versions/{versionId}`.
+- Manter a visualizacao em modo somente leitura.
+- Nao alterar o canvas atual e nao implementar restauracao.
+
+Arquivo alterado:
+
+```text
+frontend/src/modules/maps/MapCanvas.tsx
+```
+
+Dados usados na validacao:
+
+```text
+map_id=d4926974-e4f2-4050-8cf8-cae8aebed730
+version_id=a8842fcc-b15c-47ae-a8df-3170be80940f
+```
+
+Resultado visual validado em producao:
+
+- A interface exibiu corretamente a area `PREVIA DA VERSAO HISTORICA`.
+- A previa mostrou `Versao 1`.
+- A previa mostrou a data `2026-07-07 20:13:36`.
+- A previa mostrou o resumo `Snapshot do canvas`.
+- A previa mostrou aviso claro de somente leitura.
+- A previa mostrou o botao `Fechar previa`.
+- Os campos do canvas foram renderizados em cards legiveis.
+- Campos vazios apareceram como `Nao preenchido`.
+- Nao existe botao `Restaurar`.
+- O canvas atual nao foi alterado.
+- Backend nao foi alterado.
+- Sem migration, IA, PDF, upload ou restauracao nesta etapa.
