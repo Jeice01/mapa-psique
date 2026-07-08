@@ -69,6 +69,7 @@ $router->post('/api/maps', [MapController::class, 'create']);
 $router->get('/api/maps/{id}/canvas-versions', [MapController::class, 'canvasVersions']);
 $router->get('/api/maps/{id}/canvas-versions/{versionId}', [MapController::class, 'canvasVersion']);
 $router->post('/api/maps/{id}/canvas-versions/{versionId}/restore', [MapController::class, 'restoreCanvasVersion']);
+$router->get('/api/maps/{id}/export/pdf', [MapController::class, 'exportPdf']);
 $router->get('/api/maps/{id}', [MapController::class, 'show']);
 $router->put('/api/maps/{id}', [MapController::class, 'update']);
 $router->delete('/api/maps/{id}', [MapController::class, 'delete']);

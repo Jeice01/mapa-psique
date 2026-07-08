@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Maps;
 
+use App\Http\BinaryResponse;
 use App\Http\JsonResponse;
+use App\Http\ResponseInterface;
 use App\Modules\Shared\AccessGuard;
 use App\Modules\Shared\Audit;
 use App\Modules\Shared\Request;
@@ -151,6 +153,30 @@ final class MapController
             return JsonResponse::error('Canvas version not found', 404);
         } catch (Throwable) {
             return JsonResponse::error('Could not restore canvas version', 500);
+        }
+    }
+
+    public function exportPdf(string $id): ResponseInterface
+    {
+        $session = AccessGuard::require(['profissional']);
+
+        if ($session instanceof JsonResponse) {
+            return $session;
+        }
+
+        try {
+            $export = (new MapService())->exportPdf($id, $session['user_id']);
+            Audit::record('map.pdf_exported', $session['user_id'], 'maps', $id, ['status_code' => 200]);
+
+            return BinaryResponse::download(
+                $export['content'],
+                'application/pdf',
+                $export['filename']
+            );
+        } catch (InvalidArgumentException) {
+            return JsonResponse::error('Map not found', 404);
+        } catch (Throwable) {
+            return JsonResponse::error('Could not export map PDF', 500);
         }
     }
 
