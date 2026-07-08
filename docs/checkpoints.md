@@ -443,3 +443,17 @@ Implementar endpoint backend para exportação em PDF do mapa atual, com autoriz
 
 ```text
 GET /api/maps/{id}/export/pdf
+---
+
+## Prompt 12B — Botão Exportar PDF no frontend
+
+**Status:** PROMPT 12B VALIDADO EM PRODUÇÃO
+
+### Objetivo
+
+Adicionar na interface do mapa/canvas um botão para exportar o mapa atual em PDF, usando o endpoint backend já implementado e validado no Prompt 12A.
+
+### Endpoint utilizado
+
+```text
+GET /api/maps/{id}/export/pdf
