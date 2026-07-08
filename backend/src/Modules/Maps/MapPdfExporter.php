@@ -38,11 +38,13 @@ final class MapPdfExporter
         $this->pages = [[]];
         $this->cursorY = self::TOP_Y;
 
-        $this->writeTitle('Mapa da Psiquê', 18);
+        $this->writeTitle('Mapa da Psiquê', 20);
         $this->writeLine('Exportação do Mapa', 13);
         $this->writeLine('Exportado em: ' . date('d/m/Y H:i'));
         $this->writeLine('Identificador do mapa: ' . $this->value($map['id'] ?? null), 9);
-        $this->space(10);
+        $this->space(4);
+        $this->addLine(self::MARGIN_X, $this->cursorY, self::PAGE_WIDTH - self::MARGIN_X, $this->cursorY);
+        $this->space(12);
 
         $this->writeSection('Dados básicos do mapa');
         $this->writeKeyValue('Título', $this->value($map['title'] ?? null));
@@ -70,9 +72,12 @@ final class MapPdfExporter
 
     private function writeSection(string $title): void
     {
-        $this->ensureSpace(self::LINE_HEIGHT + 8);
+        $this->ensureSpace(self::LINE_HEIGHT + 14);
+        $this->space(4);
         $this->addText($title, self::MARGIN_X, $this->cursorY, 12, true);
-        $this->cursorY -= self::LINE_HEIGHT + 2;
+        $this->cursorY -= self::LINE_HEIGHT;
+        $this->addLine(self::MARGIN_X, $this->cursorY + 4, self::PAGE_WIDTH - self::MARGIN_X, $this->cursorY + 4);
+        $this->space(8);
     }
 
     private function writeKeyValue(string $label, string $value): void
@@ -82,17 +87,20 @@ final class MapPdfExporter
 
     private function writeField(string $label, string $value): void
     {
-        $this->ensureSpace(self::LINE_HEIGHT * 2);
-        $this->addText($label, self::MARGIN_X, $this->cursorY, 10, true);
-        $this->cursorY -= self::LINE_HEIGHT;
+        $this->ensureSpace(self::LINE_HEIGHT * 3);
+
+        $this->addText('• ' . $label, self::MARGIN_X, $this->cursorY, 10, true);
+        $this->cursorY -= self::LINE_HEIGHT + 2;
 
         $text = trim($value) === '' ? 'Não preenchido' : $value;
-
-        foreach ($this->wrapText($text, 10, self::PAGE_WIDTH - (self::MARGIN_X * 2)) as $line) {
-            $this->writeLine($line, 10, self::MARGIN_X + 10);
+        $contentX = self::MARGIN_X + 14;
+        $contentWidth = self::PAGE_WIDTH - self::MARGIN_X - $contentX;
+        
+        foreach ($this->wrapText($text, 10, $contentWidth) as $line) {
+            $this->writeLine($line, 10, $contentX);
         }
 
-        $this->space(5);
+        $this->space(8);
     }
 
     private function writeLine(string $text, int $fontSize = 10, float $x = self::MARGIN_X): void
@@ -115,6 +123,11 @@ final class MapPdfExporter
         if (($this->cursorY - $height) < self::BOTTOM_Y) {
             $this->pages[] = [];
             $this->cursorY = self::TOP_Y;
+
+            $this->addText('Mapa da Psiquê — Relatório exportado', self::MARGIN_X, $this->cursorY, 10, true);
+            $this->cursorY -= self::LINE_HEIGHT;
+            $this->addLine(self::MARGIN_X, $this->cursorY + 4, self::PAGE_WIDTH - self::MARGIN_X, $this->cursorY + 4);
+            $this->space(10);
         }
     }
 
@@ -128,6 +141,17 @@ final class MapPdfExporter
             $x,
             $y,
             $this->pdfText($text)
+        );
+    }
+
+    private function addLine(float $x1, float $y1, float $x2, float $y2): void
+    {
+        $this->pages[array_key_last($this->pages)][] = sprintf(
+            '0.75 w %.2F %.2F m %.2F %.2F l S',
+            $x1,
+            $y1,
+            $x2,
+            $y2
         );
     }
 
@@ -224,14 +248,24 @@ final class MapPdfExporter
 
         foreach ($this->pages as $index => $_commands) {
             $pageNumber = $index + 1;
+
+            $this->pages[$index][] = sprintf(
+                '0.50 w %.2F %.2F m %.2F %.2F l S',
+                self::MARGIN_X,
+                58.0,
+                self::PAGE_WIDTH - self::MARGIN_X,
+                58.0,
+            );
+
             $this->pages[$index][] = sprintf(
                 'BT /F1 8 Tf %.2F %.2F Td %s Tj ET',
                 self::MARGIN_X,
                 42.0,
                 $this->pdfText('Gerado pelo Mapa da Psiquê. Documento confidencial. Uso restrito ao profissional autorizado.')
             );
+
             $this->pages[$index][] = sprintf(
-                'BT /F1 8 Tf %.2F %.2F Td %s Tj ET',
+               'BT /F1 8 Tf %.2F %.2F Td %s Tj ET',
                 self::PAGE_WIDTH - 105,
                 42.0,
                 $this->pdfText(sprintf('Página %d de %d', $pageNumber, $pageCount))
