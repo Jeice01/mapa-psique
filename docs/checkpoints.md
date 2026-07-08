@@ -304,3 +304,54 @@ Resultado validado em producao:
 - Endpoint exige autenticacao/CSRF.
 - Frontend ainda nao tem botao `Restaurar`.
 - Sem migration, IA, PDF, upload ou Prompt 10B nesta etapa.
+
+## Checkpoint tecnico - Prompt 10B Botao Restaurar com confirmacao na interface
+
+**Data/hora da validacao:** 08/07/2026 09:04:37 -03:00
+**Commit main:** `2b393b1 feat: add restore confirmation for canvas versions`
+**Commit deploy:** `539dc51 deploy: publish restore confirmation for canvas versions`
+**Ambiente:** Producao Hostinger
+**Dominio:** https://mapapsique.orbisconect.com
+
+Status final: PROMPT 10B VALIDADO EM PRODUCAO.
+
+Objetivo do prompt:
+
+- Adicionar na interface a acao de restaurar uma versao historica do canvas.
+- Exigir confirmacao explicita antes de chamar o endpoint de restore.
+- Informar ao usuario que o canvas atual sera substituido.
+- Informar ao usuario que um backup automatico sera criado.
+- Atualizar canvas e historico somente apos sucesso da API.
+
+Arquivos alterados:
+
+```text
+frontend/src/modules/maps/MapCanvas.tsx
+frontend/src/shared/api/httpClient.ts
+```
+
+Endpoint usado:
+
+```text
+POST /api/maps/{id}/canvas-versions/{versionId}/restore
+```
+
+Resultado visual validado em producao:
+
+- A previa historica exibiu o botao `Restaurar esta versao`.
+- O primeiro clique nao executou a restauracao.
+- Foi exibida confirmacao inline.
+- A confirmacao informou que o canvas atual seria substituido.
+- A confirmacao informou que um backup automatico seria criado.
+- A confirmacao informou que o historico seria preservado.
+- Botao `Confirmar restauracao` presente.
+- Botao `Cancelar` presente.
+
+Resultado real validado em producao:
+
+- Usuaria clicou em `Confirmar restauracao`.
+- Interface exibiu: `Versao restaurada com sucesso. Backup automatico criado como versao 3.`
+- Historico passou a exibir a versao 3.
+- A versao 3 corresponde ao backup automatico criado antes da restauracao.
+- Backend nao foi alterado nesta etapa.
+- Sem migration, IA, PDF ou upload nesta etapa.
