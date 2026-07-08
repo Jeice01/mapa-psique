@@ -355,3 +355,76 @@ Resultado real validado em producao:
 - A versao 3 corresponde ao backup automatico criado antes da restauracao.
 - Backend nao foi alterado nesta etapa.
 - Sem migration, IA, PDF ou upload nesta etapa.
+
+## Checkpoint tecnico - Prompt 11 Polimento UX e seguranca operacional do fluxo de versoes/restauracao
+
+**Data/hora da validacao:** 08/07/2026 09:33:48 -03:00
+**Commit main:** `0323642 feat: polish canvas version restore ux`
+**Commit deploy:** `f33de6f deploy: publish canvas version restore ux polish`
+**Ambiente:** Producao Hostinger
+**Dominio:** https://mapapsique.orbisconect.com
+
+Status final: PROMPT 11 VALIDADO EM PRODUCAO.
+
+Objetivo do prompt:
+
+- Melhorar a clareza visual e operacional do fluxo de historico, previa e restauracao de versoes do canvas.
+- Reduzir risco de restauracao acidental.
+- Melhorar mensagens de loading, erro e sucesso.
+- Manter as regras de backend ja validadas sem alteracoes.
+
+Arquivo alterado:
+
+```text
+frontend/src/modules/maps/MapCanvas.tsx
+```
+
+Melhorias feitas:
+
+- Historico do canvas ficou mais legivel.
+- Historico passou a exibir versao, data formatada, resumo e tipo da versao.
+- Versao selecionada para previa passou a receber destaque `Em previa`.
+- Versoes de backup passaram a ser identificadas como `Backup automatico`.
+- Snapshots comuns continuam identificados como `Snapshot do canvas`.
+- Estado vazio passou a informar que o historico sera criado automaticamente ao salvar o canvas.
+- Mensagens de loading ficaram especificas para historico, previa e restauracao.
+- Mensagens de erro e sucesso ficaram amigaveis, sem stack trace.
+- Previa historica passou a reforcar que e uma visualizacao somente leitura.
+- Previa historica reforca que abrir a previa nao altera o canvas atual.
+- Confirmacao de restauracao ficou mais segura.
+- Confirmacao passou a explicar que o canvas atual sera substituido.
+- Confirmacao passou a explicar que um backup automatico sera criado antes da restauracao.
+- Botao final de confirmacao so habilita apos digitar exatamente `RESTAURAR`.
+- Botao `Cancelar` limpa a confirmacao e o texto digitado.
+- Protecao contra duplo POST foi mantida.
+- Canvas local continua sendo atualizado somente apos sucesso da API.
+
+Validacao visual em producao:
+
+- Historico do canvas exibiu versao, data, resumo e tipo.
+- Versoes de backup apareceram como `Backup automatico`.
+- Versao selecionada apareceu com destaque `Em previa`.
+- Area de previa historica reforcou visualizacao somente leitura.
+- Clique em `Restaurar esta versao` abriu confirmacao inline sem executar POST.
+- Botao `Confirmar restauracao` permaneceu desabilitado antes de digitar `RESTAURAR`.
+- Apos digitar `RESTAURAR`, o botao final habilitou.
+- Botao `Cancelar` limpou a confirmacao.
+- Mensagens de loading, erro e sucesso ficaram mais amigaveis.
+- Nao foi executada restauracao real automatica durante o deploy.
+
+Publicacao na deploy:
+
+```text
+index.html
+assets/index-D7rilL_M.css
+assets/index-wcxDDnn0.js
+```
+
+Confirmacoes:
+
+- Backend nao foi alterado.
+- `api/_app` nao foi alterado.
+- `frontend/src/shared/api/httpClient.ts` nao foi alterado.
+- Nao houve migration.
+- Nao houve IA, PDF ou upload.
+- Nao houve merge completo da `main` na `deploy`.
