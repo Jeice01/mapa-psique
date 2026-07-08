@@ -428,3 +428,18 @@ Confirmacoes:
 - Nao houve migration.
 - Nao houve IA, PDF ou upload.
 - Nao houve merge completo da `main` na `deploy`.
+
+---
+
+## Prompt 12A — Backend de exportação PDF do mapa
+
+**Status:** PROMPT 12A VALIDADO EM PRODUÇÃO
+
+### Objetivo
+
+Implementar endpoint backend para exportação em PDF do mapa atual, com autorização por usuário/profissional, sem alterar frontend, sem criar migration e sem adicionar dependência externa.
+
+### Endpoint criado
+
+```text
+GET /api/maps/{id}/export/pdf
