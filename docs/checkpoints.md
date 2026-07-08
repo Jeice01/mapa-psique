@@ -254,3 +254,53 @@ Resultado visual validado em producao:
 - O canvas atual nao foi alterado.
 - Backend nao foi alterado.
 - Sem migration, IA, PDF, upload ou restauracao nesta etapa.
+
+## Checkpoint tecnico - Prompt 10A Backend de restauracao segura de versao historica do canvas
+
+**Data/hora da validacao:** 07/07/2026 22:18:27 -03:00
+**Commit main:** `c95bf43 feat: add safe canvas version restore endpoint`
+**Commit deploy:** `7cadf7e deploy: publish safe canvas version restore endpoint`
+**Ambiente:** Producao Hostinger
+**Dominio:** https://mapapsique.orbisconect.com
+
+Status final: PROMPT 10A VALIDADO EM PRODUCAO.
+
+Objetivo do prompt:
+
+- Criar backend seguro para restaurar o canvas atual a partir de uma versao historica.
+- Exigir autenticacao, perfil profissional e CSRF.
+- Validar ownership do mapa antes da restauracao.
+- Criar snapshot automatico do canvas atual antes de substituir o conteudo.
+- Manter a operacao atomica com transacao e rollback em caso de falha.
+
+Endpoint criado:
+
+```text
+POST /api/maps/{id}/canvas-versions/{versionId}/restore
+```
+
+Dados usados na validacao:
+
+```text
+map_id=d4926974-e4f2-4050-8cf8-cae8aebed730
+version_id_restaurado=a8842fcc-b15c-47ae-a8df-3170be80940f
+backup_version_id=84b127ad-de61-4df9-b902-2b9121a87a60
+restored_version_number=1
+backup_version_number=2
+```
+
+Resultado validado em producao:
+
+- `POST /restore` retornou `HTTP/1.1 200 OK`.
+- Resposta retornou `success: true`.
+- Resposta retornou `message: Versao restaurada com sucesso.`.
+- Canvas atual passou a corresponder a versao restaurada.
+- Snapshot automatico pre-restauracao foi criado antes da restauracao.
+- Historico passou de 1 para 2 versoes.
+- Backup criado com `version_number=2`.
+- Summary do backup: `Snapshot automatico antes da restauracao`.
+- Listagem do historico continua sem retornar `canvas_data`.
+- Transacao segura validada: snapshot e update ocorreram juntos.
+- Endpoint exige autenticacao/CSRF.
+- Frontend ainda nao tem botao `Restaurar`.
+- Sem migration, IA, PDF, upload ou Prompt 10B nesta etapa.
