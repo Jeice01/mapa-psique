@@ -377,6 +377,14 @@ export function MapCanvas({ map, onSave }: Props) {
                     >
                       {versionDetailsLoadingId === version.id ? "Carregando prévia..." : "Ver detalhes"}
                     </button>
+                    <button
+                      className="rounded-md border border-brand-300 bg-white px-3 py-1.5 text-xs font-medium text-brand-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={exportingVersionPdfId === version.id || restoreLoading}
+                      onClick={() => void handleExportVersionPdf(version.id)}
+                      type="button"
+                    >
+                      {exportingVersionPdfId === version.id ? "Gerando PDF..." : "Exportar PDF"}
+                    </button>
                   </div>
                 </div>
               );
