@@ -248,12 +248,12 @@ final class MapService
         $text = trim((string) ($value ?? ''));
 
         if ($text === '') {
-            return date('Y-m-d-H-i');
+            return 'Não informado';;
         }
 
         $timestamp = strtotime($text);
 
-        return $timestamp === false ? date('Y-m-d-H-i') : date('Y-m-d-H-i', $timestamp);
+        return $timestamp === false ? $text : date('d/m/Y H:i', $timestamp);
     }
 
     private function formatDateForFilename(mixed $value): string
