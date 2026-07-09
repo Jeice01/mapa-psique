@@ -1,6 +1,19 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { exportMapPdf, getMap, getMapCanvasVersion, listMapCanvasVersions, restoreMapCanvasVersion } from "../../shared/api/httpClient";
-import type { MapCanvasData, MapCanvasVersion, MapCanvasVersionDetails, MapDraft, RestoreMapCanvasVersionResult } from "../../shared/api/httpClient";
+import {
+  exportMapCanvasVersionPdf,
+  exportMapPdf,
+  getMap,
+  getMapCanvasVersion,
+  listMapCanvasVersions,
+  restoreMapCanvasVersion,
+} from "../../shared/api/httpClient";
+import type {
+  MapCanvasData,
+  MapCanvasVersion,
+  MapCanvasVersionDetails,
+  MapDraft,
+  RestoreMapCanvasVersionResult,
+} from "../../shared/api/httpClient";
 
 type Props = {
   map: MapDraft;
@@ -106,6 +119,8 @@ export function MapCanvas({ map, onSave }: Props) {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportPdfMessage, setExportPdfMessage] = useState<string | null>(null);
   const [exportPdfError, setExportPdfError] = useState<string | null>(null);
+  const [exportingVersionPdfId, setExportingVersionPdfId] = useState<string | null>(null);
+  const [exportVersionPdfError, setExportVersionPdfError] = useState<string | null>(null);
   const isDirty = serializeCanvas(canvas) !== serializeCanvas(savedCanvas);
 
   const loadVersions = useCallback(async () => {
@@ -133,6 +148,8 @@ export function MapCanvas({ map, onSave }: Props) {
     setRestoreResult(null);
     setExportPdfMessage(null);
     setExportPdfError(null);
+    setExportVersionPdfError(null);
+    setExportingVersionPdfId(null);
   }, [map.canvas_json, map.id]);
 
   useEffect(() => {
@@ -163,6 +180,7 @@ export function MapCanvas({ map, onSave }: Props) {
   async function handleViewVersion(versionId: string) {
     setVersionDetailsLoadingId(versionId);
     setVersionDetailsError(null);
+    setExportVersionPdfError(null);
 
     try {
       setSelectedVersion(await getMapCanvasVersion(map.id, versionId));
@@ -232,6 +250,34 @@ export function MapCanvas({ map, onSave }: Props) {
       setExportingPdf(false);
     }
   }, [map.id]);
+
+  const handleExportVersionPdf = useCallback(
+    async (versionId: string) => {
+      setExportingVersionPdfId(versionId);
+      setExportVersionPdfError(null);
+      setExportPdfMessage(null);
+
+      try {
+        const { blob, filename } = await exportMapCanvasVersionPdf(map.id, versionId);
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = objectUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+
+        setExportPdfMessage("PDF da versão histórica gerado com sucesso.");
+      } catch {
+        setExportVersionPdfError("Não foi possível exportar o PDF desta versão agora.");
+      } finally {
+        setExportingVersionPdfId(null);
+      }
+    },
+    [map.id]
+  );
 
   return (
     <form className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-5" onSubmit={handleSubmit}>
@@ -343,11 +389,14 @@ export function MapCanvas({ map, onSave }: Props) {
 
         {selectedVersion ? (
           <HistoricalVersionPreview
+            exportError={exportVersionPdfError}
+            exportLoading={exportingVersionPdfId === selectedVersion.id}
             restoreError={restoreError}
             restoreLoading={restoreLoading}
             restoreResult={restoreResult}
             version={selectedVersion}
             onClose={() => setSelectedVersion(null)}
+            onExportPdf={() => void handleExportVersionPdf(selectedVersion.id)}
             onRestore={() => void handleRestoreVersion(selectedVersion.id)}
           />
         ) : null}
@@ -357,18 +406,24 @@ export function MapCanvas({ map, onSave }: Props) {
 }
 
 function HistoricalVersionPreview({
+  exportError,
+  exportLoading,
   restoreError,
   restoreLoading,
   restoreResult,
   version,
   onClose,
+  onExportPdf,
   onRestore,
 }: {
+  exportError: string | null;
+  exportLoading: boolean;
   restoreError: string | null;
   restoreLoading: boolean;
   restoreResult: RestoreMapCanvasVersionResult | null;
   version: MapCanvasVersionDetails;
   onClose: () => void;
+  onExportPdf: () => void;
   onRestore: () => void;
 }) {
   const preview = buildHistoricalPreview(version.canvas_data);
@@ -415,6 +470,15 @@ function HistoricalVersionPreview({
               type="button"
             >
               Restaurar esta versão
+            </button>
+
+            <button
+              className="rounded-md border border-brand-300 bg-white px-3 py-1.5 text-xs font-medium text-brand-800 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={exportLoading || restoreLoading}
+              onClick={onExportPdf}
+              type="button"
+            >
+              {exportLoading ? "Gerando PDF..." : "Exportar PDF"}
             </button>
 
             <button
@@ -483,6 +547,8 @@ function HistoricalVersionPreview({
       ) : null}
 
       {restoreError ? <p className="mt-4 rounded-md border border-red-200 bg-white p-3 text-sm font-medium text-red-700">{restoreError}</p> : null}
+
+      {exportError ? <p className="mt-4 rounded-md border border-red-200 bg-white p-3 text-sm font-medium text-red-700">{exportError}</p> : null}
 
       {historicalCanvas ? (
         <div className="mt-4 grid gap-3 lg:grid-cols-2">

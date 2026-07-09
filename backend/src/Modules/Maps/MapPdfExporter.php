@@ -38,10 +38,17 @@ final class MapPdfExporter
         $this->pages = [[]];
         $this->cursorY = self::TOP_Y;
 
+        $exportSubtitle = $this->optionalText($map['pdf_export_subtitle'] ?? null, 'Exportação do Mapa');
+
         $this->writeTitle('Mapa da Psiquê', 20);
-        $this->writeLine('Exportação do Mapa', 13);
+        $this->writeLine($exportSubtitle, 13);
         $this->writeLine('Exportado em: ' . date('d/m/Y H:i'));
         $this->writeLine('Identificador do mapa: ' . $this->value($map['id'] ?? null), 9);
+
+        foreach ($this->metadataLines($map['pdf_metadata'] ?? null) as $metadataLine) {
+            $this->writeLine($metadataLine, 9);
+        }
+
         $this->space(4);
         $this->addLine(self::MARGIN_X, $this->cursorY, self::PAGE_WIDTH - self::MARGIN_X, $this->cursorY);
         $this->space(12);
@@ -53,7 +60,7 @@ final class MapPdfExporter
         $this->writeKeyValue('Última atualização', $this->formatDate($map['updated_at'] ?? null));
         $this->space(8);
 
-        $this->writeSection('Canvas atual');
+        $this->writeSection($this->optionalText($map['pdf_canvas_section_title'] ?? null, 'Canvas atual'));
         $canvas = $this->normalizeCanvas($map['canvas_json'] ?? null);
 
         foreach (self::CANVAS_FIELDS as $key => $label) {
@@ -221,6 +228,40 @@ final class MapPdfExporter
 
         return $canvas;
     }
+
+    private function optionalText(mixed $value, string $fallback): string
+    {
+        $text = trim((string) ($value ?? ''));
+
+        return $text === '' ? $fallback : $text;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function metadataLines(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $lines = [];
+
+        foreach ($value as $label => $content) {
+            $labelText = trim((string) $label);
+            $contentText = trim((string) ($content ?? ''));
+
+            if ($labelText === '' || $contentText === '') {
+                continue;
+            }
+
+            $lines[] = $labelText . ': ' . $contentText;
+        }
+
+        return $lines;
+    }
+
+
 
     private function value(mixed $value): string
     {

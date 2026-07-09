@@ -156,6 +156,34 @@ final class MapController
         }
     }
 
+    public function exportCanvasVersionPdf(string $id, string $versionId): ResponseInterface
+    {
+        $session = AccessGuard::require(['profissional']);
+
+        if ($session instanceof JsonResponse) {
+            return $session;
+        }
+
+        try {
+            $export = (new MapService())->exportCanvasVersionPdf($id, $versionId, $session['user_id']);
+            Audit::record('map.canvas_version_pdf_exported', $session['user_id'], 'maps', $id, [
+                'status_code' => 200,
+                'version_id' => $versionId,
+            ]);
+
+            return BinaryResponse::download(
+                $export['content'],
+                'application/pdf',
+                $export['filename']
+            );
+        } catch (InvalidArgumentException) {
+            return JsonResponse::error('Canvas version not found', 404);
+        } catch (Throwable) {
+            return JsonResponse::error('Could not export canvas version PDF', 500);
+        }
+    }
+
+
     public function exportPdf(string $id): ResponseInterface
     {
         $session = AccessGuard::require(['profissional']);

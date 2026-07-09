@@ -413,3 +413,41 @@ function getFilenameFromContentDisposition(disposition: string | null): string |
 
   return filenameMatch?.[1] ?? null;
 }
+
+export async function exportMapCanvasVersionPdf(
+  mapId: string,
+  versionId: string
+): Promise<ExportMapPdfResult> {
+  const response = await fetch(
+    `${apiBaseUrl}/maps/${encodeURIComponent(mapId)}/canvas-versions/${encodeURIComponent(versionId)}/export/pdf`,
+    {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        Accept: "application/pdf",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    let message = "Não foi possível exportar o PDF desta versão agora.";
+
+    try {
+      const data = (await response.json()) as ApiErrorPayload;
+      message = data.message ?? data.error ?? message;
+    } catch {
+      // PDF endpoint may not return JSON on failure.
+    }
+
+    throw new ApiError(message, response.status);
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const filenameMatch = disposition.match(/filename="?([^"]+)"?/i);
+
+  return {
+    blob,
+    filename: filenameMatch?.[1] ?? "mapa-psique-versao-historica.pdf",
+  };
+}

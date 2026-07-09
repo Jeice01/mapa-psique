@@ -188,12 +188,69 @@ final class MapService
         ];
     }
 
+
+    /**
+    * @return array{filename:string,content:string}
+    */
+    public function exportCanvasVersionPdf(string $id, string $versionId, string $ownerUserId): array
+    {
+        $map = $this->find($id, $ownerUserId);
+        $version = $this->findCanvasVersion($id, $versionId, $ownerUserId);
+
+        $versionNumber = (int) ($version['version_number'] ?? 0);
+        $versionLabel = $versionNumber > 0 ? '#' . $versionNumber : $this->valueForFilename($versionId);
+        $versionCreatedAt = $this->formatDateForPdfMetadata($version['created_at'] ?? null);
+        $summary = trim((string) ($version['summary'] ?? ''));
+
+        $map['canvas_json'] = $version['canvas_data'] ?? [];
+        $map['pdf_export_subtitle'] = 'Exportação de Versão Histórica';
+        $map['pdf_canvas_section_title'] = 'Canvas da versão histórica';
+        $map['pdf_metadata'] = [
+            'Versão histórica' => $versionLabel,
+            'Data da versão' => $versionCreatedAt,
+            'Resumo da versão' => $summary,
+        ];
+
+        return [
+            'filename' => sprintf(
+                'mapa-psique-%s-versao-%s.pdf',
+                $this->valueForFilename($id),
+                $this->valueForFilename((string) ($version['version_number'] ?? $versionId))
+            ),
+            'content' => (new MapPdfExporter())->export($map),
+        ];
+    }
+
+
     public function archive(string $id, string $ownerUserId, string $deletedBy): void
     {
         if (!$this->maps->softDeleteByOwner($id, $ownerUserId, $deletedBy)) {
             throw new InvalidArgumentException('Map not found');
         }
     }
+
+
+    private function valueForFilename(string $value): string
+    {
+        $safe = preg_replace('/[^a-zA-Z0-9_-]/', '-', $value) ?? '';
+
+        return trim($safe, '-') === '' ? 'mapa' : trim($safe, '-');
+    }
+
+    private function formatDateForPdfMetadata(mixed $value): string
+    {
+        $text = trim((string) ($value ?? ''));
+
+        if ($text === '') {
+            return 'Não informado';
+        }
+
+        $timestamp = strtotime($text);
+
+        return $timestamp === false ? $text : date('d/m/Y H:i', $timestamp);
+    }
+
+
 
     /**
      * @param array<string, mixed> $payload
