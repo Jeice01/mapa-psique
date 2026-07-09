@@ -211,11 +211,17 @@ final class MapService
             'Resumo da versão' => $summary,
         ];
 
+        $versionNumberForFilename = (string) ($version['version_number'] ?? '');
+        $versionNumberForFilename = $versionNumberForFilename === '' ? $versionId : $versionNumberForFilename;
+
+        $versionDateForFilename = $this->formatDateForFilename($version['created_at'] ?? null);
+
         return [
             'filename' => sprintf(
-                'mapa-psique-%s-versao-%s.pdf',
+                'mapa-psique-%s-versao-%s-%s.pdf',
                 $this->valueForFilename($id),
-                $this->valueForFilename((string) ($version['version_number'] ?? $versionId))
+                $this->valueForFilename($versionNumberForFilename),
+                $versionDateForFilename
             ),
             'content' => (new MapPdfExporter())->export($map),
         ];
@@ -242,12 +248,25 @@ final class MapService
         $text = trim((string) ($value ?? ''));
 
         if ($text === '') {
-            return 'Não informado';
+            return date('Y-m-d-H-i');
         }
 
         $timestamp = strtotime($text);
 
-        return $timestamp === false ? $text : date('d/m/Y H:i', $timestamp);
+        return $timestamp === false ? date('Y-m-d-H-i') : date('Y-m-d-H-i', $timestamp);
+    }
+
+    private function formatDateForFilename(mixed $value): string
+    {
+        $text = trim((string) ($value ?? ''));
+
+        if ($text === '') {
+            return date('Y-m-d-H-i');
+        }
+
+        $timestamp = strtotime($text);
+
+        return $timestamp === false ? date('Y-m-d-H-i') : date('Y-m-d-H-i', $timestamp);
     }
 
 
