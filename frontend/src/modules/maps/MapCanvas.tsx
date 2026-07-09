@@ -364,7 +364,8 @@ export function MapCanvas({ map, onSave }: Props) {
                       <span className={versionKindClassName(version.summary)}>{versionKindLabel(version.summary)}</span>
                       {isSelected ? <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-brand-700">Em prévia</span> : null}
                     </div>
-                    <p className="mt-1 text-xs text-slate-600">{version.summary ?? "Snapshot do canvas"}</p>
+                    <p className="mt-1 text-xs text-slate-600">{version.summary ?? versionKindHelp(version.summary)}</p>
+                    <p className="mt-1 text-xs text-slate-500">{versionKindHelp(version.summary)}</p>
                     <p className="mt-1 text-xs text-slate-500">Criada em {formatDate(version.created_at)}</p>
                   </div>
 
@@ -458,7 +459,8 @@ function HistoricalVersionPreview({
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Prévia da versão histórica</p>
           <h4 className="mt-1 text-base font-semibold text-slate-950">Versão {version.version_number}</h4>
-          <p className="mt-1 text-sm text-slate-700">{version.summary ?? "Snapshot do canvas"}</p>
+          <p className="mt-1 text-sm text-slate-700">{version.summary ?? versionKindHelp(version.summary)}</p>
+          <p className="mt-1 text-xs text-slate-600">{versionKindHelp(version.summary)}</p>
           <div className="mt-2 space-y-1 text-xs font-medium text-amber-900">
             <p>Visualização somente leitura.</p>
             <p>Esta prévia não altera o canvas atual.</p>
@@ -645,17 +647,23 @@ function isAutomaticBackup(summary?: string | null): boolean {
 }
 
 function versionKindLabel(summary?: string | null): string {
-  return isAutomaticBackup(summary) ? "Backup automático" : "Snapshot do canvas";
+  return isAutomaticBackup(summary) ? "Backup automático" : "Snapshot manual";
+}
+
+function versionKindHelp(summary?: string | null): string {
+  return isAutomaticBackup(summary)
+    ? "Criado automaticamente antes de uma restauração."
+    : "Criado ao salvar alterações no canvas.";
 }
 
 function versionKindClassName(summary?: string | null): string {
-  const baseClassName = "rounded-full px-2 py-0.5 text-xs font-medium";
+  const baseClassName = "rounded-full px-2 py-0.5 text-xs font-semibold";
 
   if (isAutomaticBackup(summary)) {
     return `${baseClassName} bg-red-50 text-red-700`;
   }
 
-  return `${baseClassName} bg-slate-100 text-slate-700`;
+  return `${baseClassName} bg-slate-50 text-slate-700`;
 }
 
 function buildHistoricalPreview(value: unknown): { canvas: MapCanvasData | null; technicalPreview: string | null } {
