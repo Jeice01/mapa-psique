@@ -49,6 +49,7 @@ $router = new Router();
 
 $router->get('/api/health', [HealthController::class, 'show']);
 $router->get('/api/db-check', [DbCheckController::class, 'show']);
+
 $router->get('/api/csrf-token', [AuthController::class, 'csrfToken']);
 $router->post('/api/auth/register', [AuthController::class, 'register']);
 $router->post('/api/auth/login', [AuthController::class, 'login']);
@@ -56,19 +57,26 @@ $router->post('/api/auth/forgot-password', [AuthController::class, 'forgotPasswo
 $router->post('/api/auth/reset-password', [AuthController::class, 'resetPassword']);
 $router->post('/api/auth/logout', [AuthController::class, 'logout']);
 $router->get('/api/auth/me', [AuthController::class, 'me']);
+
 $router->get('/api/consents/active', [ConsentController::class, 'active']);
 $router->post('/api/consents/accept', [ConsentController::class, 'accept']);
+
 $router->get('/api/dashboard/summary', [DashboardController::class, 'summary']);
+
 $router->get('/api/patients', [PatientController::class, 'index']);
 $router->post('/api/patients', [PatientController::class, 'create']);
 $router->get('/api/patients/{id}', [PatientController::class, 'show']);
 $router->put('/api/patients/{id}', [PatientController::class, 'update']);
 $router->delete('/api/patients/{id}', [PatientController::class, 'delete']);
+
 $router->get('/api/maps', [MapController::class, 'index']);
 $router->post('/api/maps', [MapController::class, 'create']);
+
 $router->get('/api/maps/{id}/canvas-versions', [MapController::class, 'canvasVersions']);
 $router->get('/api/maps/{id}/canvas-versions/{versionId}', [MapController::class, 'canvasVersion']);
 $router->post('/api/maps/{id}/canvas-versions/{versionId}/restore', [MapController::class, 'restoreCanvasVersion']);
+$router->get('/api/maps/{id}/canvas-versions/{versionId}/export/pdf', [MapController::class, 'exportCanvasVersionPdf']);
+
 $router->get('/api/maps/{id}/export/pdf', [MapController::class, 'exportPdf']);
 $router->get('/api/maps/{id}', [MapController::class, 'show']);
 $router->put('/api/maps/{id}', [MapController::class, 'update']);
