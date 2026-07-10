@@ -77,18 +77,26 @@ final class OpenAiClient
     }
 
     /**
-     * Generate an image using DALL-E and return it as base64.
+     * Generate an image and return it as base64.
+     * Supports both DALL-E (dall-e-2, dall-e-3) and gpt-image-* models.
      */
     public function generateImage(string $prompt): string
     {
-        $payload = json_encode([
-            'model'           => $this->imageModel,
-            'prompt'          => $prompt,
-            'n'               => 1,
-            'size'            => '1024x1024',
-            'quality'         => 'standard',
-            'response_format' => 'b64_json',
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $isDallE = str_starts_with($this->imageModel, 'dall-e');
+
+        $params = [
+            'model'   => $this->imageModel,
+            'prompt'  => $prompt,
+            'n'       => 1,
+            'size'    => '1024x1024',
+            'quality' => $isDallE ? 'standard' : 'medium',
+        ];
+
+        if ($isDallE) {
+            $params['response_format'] = 'b64_json';
+        }
+
+        $payload = json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         if ($payload === false) {
             throw new RuntimeException('Failed to encode OpenAI image request payload.');
