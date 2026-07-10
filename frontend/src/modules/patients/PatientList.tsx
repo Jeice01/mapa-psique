@@ -54,6 +54,7 @@ export function PatientList() {
   const [editing, setEditing] = useState<Patient | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const latestRequestRef = useRef(0);
 
@@ -81,7 +82,9 @@ export function PatientList() {
       }
 
       setPatients([]);
-      setError("Não foi possível carregar pacientes.");
+      setError(
+        "Não foi possível carregar os pacientes. Tente novamente em alguns instantes.",
+      );
     } finally {
       if (requestId === latestRequestRef.current) {
         setLoading(false);
@@ -94,6 +97,11 @@ export function PatientList() {
   }, [load]);
 
   async function handleSubmit(payload: Partial<Patient>) {
+    const isEditing = editing !== null;
+
+    setError(null);
+    setSuccess(null);
+
     try {
       if (editing) {
         await updatePatient(editing.id, payload);
@@ -104,29 +112,47 @@ export function PatientList() {
       setEditing(null);
       setShowForm(false);
       await load(appliedQuery);
+
+      setSuccess(
+        isEditing
+          ? "Paciente atualizado com sucesso."
+          : "Paciente cadastrado com sucesso.",
+      );
     } catch {
-      setError("Não foi possível salvar o paciente.");
+      setError(
+        isEditing
+          ? "Não foi possível atualizar o paciente. Revise os dados e tente novamente."
+          : "Não foi possível cadastrar o paciente. Revise os dados e tente novamente.",
+      );
     }
   }
 
   async function handleEdit(patient: Patient) {
+    setError(null);
+    setSuccess(null);
+
     try {
-      setError(null);
       setEditing(await getPatient(patient.id));
       setShowForm(true);
     } catch {
-      setError("Não foi possível abrir o paciente.");
+      setError(
+        "Não foi possível abrir os dados do paciente. Tente novamente em alguns instantes.",
+      );
     }
   }
 
-  async function handleArchive(id: string) {
+  async function handleArchive(patient: Patient) {
     setError(null);
+    setSuccess(null);
 
     try {
-      await archivePatient(id);
+      await archivePatient(patient.id);
       await load(appliedQuery);
+      setSuccess(`Paciente “${patient.name}” arquivado com sucesso.`);
     } catch {
-      setError("Não foi possível arquivar o paciente.");
+      setError(
+        "Não foi possível arquivar o paciente. Tente novamente em alguns instantes.",
+      );
     }
   }
 
@@ -135,6 +161,7 @@ export function PatientList() {
       return;
     }
 
+    setSuccess(null);
     void load(query);
   }
 
@@ -144,7 +171,20 @@ export function PatientList() {
     }
 
     setQuery("");
+    setSuccess(null);
     void load("");
+  }
+
+  function handleNewPatient() {
+    setEditing(null);
+    setError(null);
+    setSuccess(null);
+    setShowForm(true);
+  }
+
+  function handleCancelForm() {
+    setEditing(null);
+    setShowForm(false);
   }
 
   return (
@@ -185,10 +225,7 @@ export function PatientList() {
 
         <button
           className="rounded-md bg-brand-600 px-4 py-2 font-medium text-white transition hover:bg-brand-700"
-          onClick={() => {
-            setEditing(null);
-            setShowForm(true);
-          }}
+          onClick={handleNewPatient}
           type="button"
         >
           Novo paciente
@@ -198,20 +235,44 @@ export function PatientList() {
       {showForm ? (
         <PatientForm
           patient={editing}
-          onCancel={() => {
-            setEditing(null);
-            setShowForm(false);
-          }}
+          onCancel={handleCancelForm}
           onSubmit={handleSubmit}
         />
       ) : null}
 
+      {success ? (
+        <div
+          className="flex items-start justify-between gap-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          role="status"
+        >
+          <span>{success}</span>
+
+          <button
+            aria-label="Fechar mensagem de sucesso"
+            className="font-medium text-emerald-700 hover:text-emerald-900"
+            onClick={() => setSuccess(null)}
+            type="button"
+          >
+            Fechar
+          </button>
+        </div>
+      ) : null}
+
       {error ? (
         <div
-          className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          className="flex items-start justify-between gap-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
           role="alert"
         >
-          {error}
+          <span>{error}</span>
+
+          <button
+            aria-label="Fechar mensagem de erro"
+            className="font-medium text-red-700 hover:text-red-900"
+            onClick={() => setError(null)}
+            type="button"
+          >
+            Fechar
+          </button>
         </div>
       ) : null}
 
@@ -284,7 +345,7 @@ export function PatientList() {
 
                 <button
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                  onClick={() => void handleArchive(patient.id)}
+                  onClick={() => void handleArchive(patient)}
                   type="button"
                 >
                   Arquivar
