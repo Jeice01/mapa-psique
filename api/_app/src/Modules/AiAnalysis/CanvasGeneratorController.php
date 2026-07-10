@@ -25,7 +25,9 @@ final class CanvasGeneratorController
             return $session;
         }
 
-        Csrf::validateHeader();
+        if (!Csrf::validate(Csrf::tokenFromRequest())) {
+            return JsonResponse::error('Token CSRF inválido.', 419);
+        }
 
         try {
             $canvas = (new AiService())->generateCanvas($id, $session['user_id']);

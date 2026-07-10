@@ -28,7 +28,9 @@ final class MapImageController
             return $session;
         }
 
-        Csrf::validateHeader();
+        if (!Csrf::validate(Csrf::tokenFromRequest())) {
+            return JsonResponse::error('Token CSRF inválido.', 419);
+        }
 
         $service = new MapImageService();
 
