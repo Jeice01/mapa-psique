@@ -157,15 +157,24 @@ PROMPT;
     /**
      * User prompt para o preenchimento visual do canvas.
      */
-    public static function canvasFillerUserPrompt(string $patientName, ?string $patientNotes): string
-    {
+    public static function canvasFillerUserPrompt(
+        string $patientName,
+        ?string $patientNotes,
+        ?string $mapNotes = null
+    ): string {
         $lines = [];
         $lines[] = "Paciente: {$patientName}";
         $lines[] = '';
 
         if ($patientNotes !== null && trim($patientNotes) !== '') {
-            $lines[] = 'Observações clínicas do psicanalista:';
+            $lines[] = 'Observações gerais sobre o paciente:';
             $lines[] = trim($patientNotes);
+            $lines[] = '';
+        }
+
+        if ($mapNotes !== null && trim($mapNotes) !== '') {
+            $lines[] = 'Observações do psicanalista sobre este mapa:';
+            $lines[] = trim($mapNotes);
             $lines[] = '';
         }
 

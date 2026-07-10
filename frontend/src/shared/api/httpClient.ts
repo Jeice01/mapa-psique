@@ -389,6 +389,45 @@ export async function exportMapPdf(mapId: string): Promise<ExportMapPdfResult> {
   return { blob, filename };
 }
 
+export async function createMapFromPatient(
+  patientId: string,
+  file: File,
+  mapNotes: string
+): Promise<{ map_id: string; patient_id: string; patient_name: string }> {
+  const csrfToken = await getCsrfToken();
+  const formData = new FormData();
+  formData.append("map_image", file);
+  if (mapNotes.trim()) {
+    formData.append("map_notes", mapNotes.trim());
+  }
+
+  const response = await fetch(
+    `${apiBaseUrl}/patients/${encodeURIComponent(patientId)}/create-map`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "X-CSRF-Token": csrfToken,
+      },
+      body: formData,
+    }
+  );
+
+  const data = (await response.json().catch(() => ({}))) as {
+    success?: boolean;
+    data?: { map_id: string; patient_id: string; patient_name: string };
+    message?: string;
+    error?: string;
+  };
+
+  if (!response.ok) {
+    throw new ApiError(data.message ?? data.error ?? "Erro ao criar mapa.", response.status);
+  }
+
+  return data.data!;
+}
+
 export async function uploadMapImage(mapId: string, file: File): Promise<{ image_path: string }> {
   const csrfToken = await getCsrfToken();
   const formData = new FormData();

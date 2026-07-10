@@ -27,6 +27,10 @@ export function ProtectedHomePage({ user, onLogout }: Props) {
     onLogout();
   }
 
+  function handleMapCreated(_mapId: string) {
+    setTab("maps");
+  }
+
   return (
     <section className="mx-auto w-full max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -52,7 +56,7 @@ export function ProtectedHomePage({ user, onLogout }: Props) {
         </button>
       </div>
 
-      {tab === "patients" ? <PatientList /> : <MapList />}
+      {tab === "patients" ? <PatientList onMapCreated={handleMapCreated} /> : <MapList />}
     </section>
   );
 }

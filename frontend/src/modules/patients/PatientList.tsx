@@ -9,6 +9,11 @@ import {
   type Patient,
 } from "../../shared/api/httpClient";
 import { PatientForm } from "./PatientForm";
+import { PatientMapSection } from "./PatientMapSection";
+
+type Props = {
+  onMapCreated?: (mapId: string) => void;
+};
 
 type PatientStatusFilter = "" | "active" | "inactive" | "archived";
 
@@ -96,7 +101,7 @@ function formatCreatedAt(createdAt?: string) {
   }).format(date);
 }
 
-export function PatientList() {
+export function PatientList({ onMapCreated }: Props = {}) {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
@@ -405,11 +410,20 @@ async function confirmRestore() {
       </div>
 
       {showForm ? (
-        <PatientForm
-          patient={editing}
-          onCancel={handleCancelForm}
-          onSubmit={handleSubmit}
-        />
+        <>
+          <PatientForm
+            patient={editing}
+            onCancel={handleCancelForm}
+            onSubmit={handleSubmit}
+          />
+          {editing !== null ? (
+            <PatientMapSection
+              patientId={editing.id}
+              patientName={editing.name}
+              onMapCreated={onMapCreated}
+            />
+          ) : null}
+        </>
       ) : null}
 
       {success ? (

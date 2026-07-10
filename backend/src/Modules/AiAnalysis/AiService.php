@@ -291,15 +291,33 @@ final class AiService
             throw new RuntimeException('Arquivo de imagem não encontrado no servidor.');
         }
 
-        $imageContent = file_get_contents($fullPath);
-        if ($imageContent === false) {
-            throw new RuntimeException('Falha ao ler o arquivo de imagem.');
+        // Suporte a PDF: converter primeira página para JPEG via Imagick
+        $mimeType = mime_content_type($fullPath) ?: 'image/jpeg';
+        if ($mimeType === 'application/pdf') {
+            if (!extension_loaded('imagick')) {
+                throw new RuntimeException(
+                    'O arquivo enviado é um PDF, mas a conversão para imagem não está disponível neste servidor. ' .
+                    'Por favor, envie uma foto ou imagem (JPEG, PNG ou WebP) do mapa físico.'
+                );
+            }
+            $imagick = new \Imagick();
+            $imagick->setResolution(150, 150);
+            $imagick->readImage($fullPath . '[0]');
+            $imagick->setImageFormat('jpeg');
+            $imageContent = $imagick->getImageBlob();
+            $imagick->clear();
+            $imagick->destroy();
+            $mimeType = 'image/jpeg';
+        } else {
+            $imageContent = file_get_contents($fullPath);
+            if ($imageContent === false) {
+                throw new RuntimeException('Falha ao ler o arquivo de imagem.');
+            }
         }
 
-        $imageBase64 = base64_encode($imageContent);
-        $mimeType    = mime_content_type($fullPath) ?: 'image/jpeg';
+        $imageBase64 = base64_encode((string) $imageContent);
 
-        // Observações do paciente (campo notes da tabela patients)
+        // Observações gerais do paciente (campo notes da tabela patients)
         $patientNotes = null;
         $patientName  = $map['patient_name'] ?? 'Paciente';
         if (!empty($map['patient_id'])) {
@@ -312,6 +330,9 @@ final class AiService
             }
         }
 
+        // Observações específicas deste mapa (campo reason)
+        $mapNotes = !empty($map['reason']) ? (string) $map['reason'] : null;
+
         $openAi = new OpenAiClient();
         if (!$openAi->isAvailable()) {
             throw new RuntimeException('OpenAI não está configurado. Defina OPENAI_API_KEY no .env.');
@@ -320,7 +341,7 @@ final class AiService
         set_time_limit(120);
 
         $systemPrompt = AiPromptBuilder::canvasFillerSystemPrompt();
-        $userPrompt   = AiPromptBuilder::canvasFillerUserPrompt($patientName, $patientNotes);
+        $userPrompt   = AiPromptBuilder::canvasFillerUserPrompt($patientName, $patientNotes, $mapNotes);
 
         $rawJson = $openAi->chatWithVision($systemPrompt, $userPrompt, $imageBase64, $mimeType);
 

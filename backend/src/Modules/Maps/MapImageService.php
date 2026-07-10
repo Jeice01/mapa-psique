@@ -91,10 +91,11 @@ final class MapImageService
     private function mimeToExt(string $mime): string
     {
         return match ($mime) {
-            'image/png'  => 'png',
-            'image/webp' => 'webp',
-            'image/gif'  => 'gif',
-            default      => 'jpg',
+            'image/png'      => 'png',
+            'image/webp'     => 'webp',
+            'image/gif'      => 'gif',
+            'application/pdf' => 'pdf',
+            default          => 'jpg',
         };
     }
 }

@@ -17,6 +17,7 @@ use App\Modules\Maps\MapImageController;
 use App\Modules\Dashboard\DashboardController;
 use App\Modules\Maps\MapController;
 use App\Modules\Patients\PatientController;
+use App\Modules\Patients\PatientMapController;
 use App\Support\Env;
 
 require dirname(__DIR__) . '/src/bootstrap.php';
@@ -72,6 +73,7 @@ $router->get('/api/patients/{id}', [PatientController::class, 'show']);
 $router->put('/api/patients/{id}', [PatientController::class, 'update']);
 $router->delete('/api/patients/{id}', [PatientController::class, 'delete']);
 $router->post('/api/patients/{id}/restore', [PatientController::class, 'restore']);
+$router->post('/api/patients/{id}/create-map', [PatientMapController::class, 'createMap']);
 
 $router->get('/api/maps', [MapController::class, 'index']);
 $router->post('/api/maps', [MapController::class, 'create']);
