@@ -78,6 +78,29 @@ final class PatientRepository
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    public function findAnyByIdAndOwner(string $id, string $ownerUserId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM patients
+             WHERE id = :id
+               AND owner_user_id = :owner_user_id
+             LIMIT 1'
+        );
+
+        $statement->execute([
+            'id' => $id,
+            'owner_user_id' => $ownerUserId,
+        ]);
+
+        $patient = $statement->fetch();
+
+        return is_array($patient) ? $patient : null;
+    }
+
+    /**
      * @param array<string, mixed> $data
      */
     public function create(array $data): string

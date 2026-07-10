@@ -60,6 +60,7 @@ export type MapDraft = {
   title: string;
   patient_id: string | null;
   patient_name?: string | null;
+  patient_status?: string | null;
   reason?: string | null;
   status: string;
   canvas_json?: MapCanvasData | string | null;
