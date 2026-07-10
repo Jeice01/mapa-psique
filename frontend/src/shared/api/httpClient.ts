@@ -94,17 +94,41 @@ export type ExportMapPdfResult = {
   filename: string;
 };
 
+export type AiInfographicSummary = {
+  emocoes?: string;
+  passado?: string;
+  presente?: string;
+  futuro?: string;
+  energia?: string;
+  conflito_principal?: string;
+  potencial_crescimento?: string;
+};
+
 export type AiProfessionalAnalysis = {
-  visao_panoramica: string;
-  analise_freudiana: string;
-  analise_junguiana: string;
-  padroes_e_complexos: string;
-  mecanismos_de_defesa: string;
-  recursos_e_potenciais: string;
-  sintese_energetica: string;
-  diagnostico_do_equilibrio: string;
-  direcao_do_tratamento: string;
-  sintese_clinica_final: string;
+  // === Formato 17 seções (novo) ===
+  visao_panoramica?: string;
+  quatro_quadrantes?: string;
+  elementos_eu?: string;
+  analise_setas?: string;
+  analise_freudiana?: string;
+  analise_junguiana?: string;
+  ausencias?: string;
+  mapa_lados?: string;
+  cruzamento_lados?: string;
+  tamanho_setas?: string;
+  agrupamento_setas?: string;
+  cruzamento_setas_quadrantes?: string;
+  sintese_energetica?: string;
+  mapa_ideal_vs_real?: string;
+  diagnostico_equilibrio?: string;
+  sintese_clinica_final?: string;
+  infographic_summary?: AiInfographicSummary;
+  // === Formato legado (backward compat) ===
+  padroes_e_complexos?: string;
+  mecanismos_de_defesa?: string;
+  recursos_e_potenciais?: string;
+  diagnostico_do_equilibrio?: string;
+  direcao_do_tratamento?: string;
 };
 
 export type AiAnalysis = {

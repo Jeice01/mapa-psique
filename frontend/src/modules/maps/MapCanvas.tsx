@@ -370,7 +370,7 @@ export function MapCanvas({ map, onSave }: Props) {
         ))}
       </div>
 
-      <AiAnalysisSection canvasHasContent={canvasHasContent} mapId={map.id} />
+      <AiAnalysisSection canvasHasContent={canvasHasContent} mapId={map.id} patientName={map.patient_name ?? undefined} />
 
       <section className="mt-5 border-t border-slate-200 pt-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

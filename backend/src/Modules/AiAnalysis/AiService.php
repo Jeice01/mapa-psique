@@ -106,6 +106,12 @@ final class AiService
             $professionalAnalysis = $parsed['professional_analysis'] ?? null;
             $patientReport        = trim((string) ($parsed['patient_report'] ?? ''));
             $imagePrompt          = trim((string) ($parsed['image_prompt'] ?? ''));
+            $infographicSummary   = $parsed['infographic_summary'] ?? null;
+
+            // Embed infographic_summary into professional_analysis (no extra DB column needed)
+            if (is_array($professionalAnalysis) && is_array($infographicSummary)) {
+                $professionalAnalysis['infographic_summary'] = $infographicSummary;
+            }
 
             // ── Image generation (optional — graceful degradation) ─────────────
             $imagePath  = null;
@@ -261,111 +267,4 @@ final class AiService
     private function imageStorageDir(): string
     {
         // backend/storage/uploads/ai/
-        return dirname(__DIR__, 4) . '/storage/uploads/ai';
-    }
-
-    // ─── Canvas filler via visão ─────────────────────────────────────────────
-
-    /**
-     * Lê a imagem do mapa via GPT-4o vision + observações do paciente
-     * e retorna os 9 campos do canvas preenchidos pela IA.
-     *
-     * @return array<string, string>
-     */
-    public function generateCanvas(string $mapId, string $ownerUserId): array
-    {
-        $mapService = new MapService();
-        $map        = $mapService->find($mapId, $ownerUserId);
-
-        $imagePath = $map['map_image_path'] ?? null;
-        if ($imagePath === null || $imagePath === '') {
-            throw new InvalidArgumentException('Este mapa não possui imagem do Mapa da Psiquê. Faça o upload primeiro.');
-        }
-
-        // Ler imagem do disco
-        $imageService = new MapImageService();
-        $storageDir   = $imageService->storageDir();
-        $fullPath     = $storageDir . DIRECTORY_SEPARATOR . basename($imagePath);
-
-        if (!file_exists($fullPath)) {
-            throw new RuntimeException('Arquivo de imagem não encontrado no servidor.');
-        }
-
-        // Suporte a PDF: converter primeira página para JPEG via Imagick
-        $mimeType = mime_content_type($fullPath) ?: 'image/jpeg';
-        if ($mimeType === 'application/pdf') {
-            if (!extension_loaded('imagick')) {
-                throw new RuntimeException(
-                    'O arquivo enviado é um PDF, mas a conversão para imagem não está disponível neste servidor. ' .
-                    'Por favor, envie uma foto ou imagem (JPEG, PNG ou WebP) do mapa físico.'
-                );
-            }
-            $imagick = new \Imagick();
-            $imagick->setResolution(150, 150);
-            $imagick->readImage($fullPath . '[0]');
-            $imagick->setImageFormat('jpeg');
-            $imageContent = $imagick->getImageBlob();
-            $imagick->clear();
-            $imagick->destroy();
-            $mimeType = 'image/jpeg';
-        } else {
-            $imageContent = file_get_contents($fullPath);
-            if ($imageContent === false) {
-                throw new RuntimeException('Falha ao ler o arquivo de imagem.');
-            }
-        }
-
-        $imageBase64 = base64_encode((string) $imageContent);
-
-        // Observações gerais do paciente (campo notes da tabela patients)
-        $patientNotes = null;
-        $patientName  = $map['patient_name'] ?? 'Paciente';
-        if (!empty($map['patient_id'])) {
-            try {
-                $patient      = $mapService->findPatientForMap($mapId, $ownerUserId);
-                $patientNotes = $patient['notes'] ?? null;
-                $patientName  = $patient['name'] ?? $patientName;
-            } catch (Throwable) {
-                // paciente não encontrado — continua sem observações
-            }
-        }
-
-        // Observações específicas deste mapa (campo reason)
-        $mapNotes = !empty($map['reason']) ? (string) $map['reason'] : null;
-
-        $openAi = new OpenAiClient();
-        if (!$openAi->isAvailable()) {
-            throw new RuntimeException('OpenAI não está configurado. Defina OPENAI_API_KEY no .env.');
-        }
-
-        set_time_limit(120);
-
-        $systemPrompt = AiPromptBuilder::canvasFillerSystemPrompt();
-        $userPrompt   = AiPromptBuilder::canvasFillerUserPrompt($patientName, $patientNotes, $mapNotes);
-
-        $rawJson = $openAi->chatWithVision($systemPrompt, $userPrompt, $imageBase64, $mimeType);
-
-        // Limpar fences de markdown se presentes
-        $rawJson = (string) preg_replace('/^```(?:json)?\s*/i', '', trim($rawJson));
-        $rawJson = (string) preg_replace('/\s*```$/', '', $rawJson);
-
-        $canvas = json_decode($rawJson, true);
-
-        if (!is_array($canvas)) {
-            throw new RuntimeException('A IA retornou um JSON inválido para o canvas.');
-        }
-
-        $fields = [
-            'main_demand', 'current_context', 'emotional_history', 'recurring_patterns',
-            'core_beliefs', 'defense_strategies', 'internal_resources',
-            'reflective_hypotheses', 'next_steps',
-        ];
-
-        $result = [];
-        foreach ($fields as $field) {
-            $result[$field] = isset($canvas[$field]) ? (string) $canvas[$field] : '';
-        }
-
-        return $result;
-    }
-}
+        return dirname(__DIR__
