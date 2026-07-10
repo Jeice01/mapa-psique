@@ -39,15 +39,20 @@ final class MapRepository
         $offset = (max(1, $page) - 1) * $limit;
 
         $statement = $this->pdo->prepare(
-            "SELECT maps.id, maps.title, maps.patient_id, patients.name AS patient_name, maps.status, maps.created_at
-             FROM maps
-             LEFT JOIN patients
-               ON patients.id = maps.patient_id
-              AND patients.owner_user_id = maps.owner_user_id
-              AND patients.deleted_at IS NULL
-             {$where}
-             ORDER BY maps.created_at DESC
-             LIMIT {$limit} OFFSET {$offset}"
+            "SELECT maps.id,
+                    maps.title,
+                    maps.patient_id,
+                    patients.name AS patient_name,
+                    patients.status AS patient_status,
+                    maps.status,
+                    maps.created_at
+            FROM maps
+            LEFT JOIN patients
+            ON patients.id = maps.patient_id
+            AND patients.owner_user_id = maps.owner_user_id
+            {$where}
+            ORDER BY maps.created_at DESC
+            LIMIT {$limit} OFFSET {$offset}"
         );
         $statement->execute($filters);
 
@@ -69,7 +74,6 @@ final class MapRepository
              LEFT JOIN patients
                ON patients.id = maps.patient_id
               AND patients.owner_user_id = maps.owner_user_id
-              AND patients.deleted_at IS NULL
              {$where}"
         );
         $statement->execute($filters);
@@ -83,7 +87,9 @@ final class MapRepository
     public function findByIdAndOwner(string $id, string $ownerUserId): ?array
     {
         $statement = $this->pdo->prepare(
-            'SELECT maps.*, patients.name AS patient_name
+            'SELECT maps.*,
+                    patients.name AS patient_name,
+                    patients.status AS patient_status
              FROM maps
              LEFT JOIN patients
                ON patients.id = maps.patient_id
@@ -91,7 +97,6 @@ final class MapRepository
               AND patients.deleted_at IS NULL
              WHERE maps.id = :id
                AND maps.owner_user_id = :owner_user_id
-               AND maps.deleted_at IS NULL
              LIMIT 1'
         );
         $statement->execute(['id' => $id, 'owner_user_id' => $ownerUserId]);

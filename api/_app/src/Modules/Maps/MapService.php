@@ -38,7 +38,7 @@ final class MapService
         $patientId = $patientId === '' ? null : $patientId;
 
         if ($patientId !== null) {
-            $this->assertPatientOwnership($patientId, $ownerUserId);
+            $this->assertPatientOwnershipForRead($patientId, $ownerUserId);
         }
 
         $data = $this->maps->listByOwner($ownerUserId, $query, $status, $patientId, $page, $perPage);
@@ -337,6 +337,15 @@ final class MapService
         }
 
         return $data;
+    }
+
+    private function assertPatientOwnershipForRead(
+        string $patientId,
+        string $ownerUserId
+    ): void {
+        if ($this->patients->findAnyByIdAndOwner($patientId, $ownerUserId) === null) {
+            throw new InvalidArgumentException('Patient not found');
+        }
     }
 
     private function assertPatientOwnership(string $patientId, string $ownerUserId): void
