@@ -4,6 +4,7 @@ import {
   createPatient,
   getPatient,
   listPatients,
+  restorePatient,
   updatePatient,
   type Patient,
 } from "../../shared/api/httpClient";
@@ -105,6 +106,9 @@ export function PatientList() {
   const [patientToArchive, setPatientToArchive] =
     useState<Patient | null>(null);
   const [archivingId, setArchivingId] = useState<string | null>(null);
+  const [patientToRestore, setPatientToRestore] =
+  useState<Patient | null>(null);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -247,6 +251,45 @@ export function PatientList() {
       setArchivingId(null);
     }
   }
+
+  function requestRestore(patient: Patient) {
+  setError(null);
+  setSuccess(null);
+  setPatientToRestore(patient);
+}
+
+function cancelRestore() {
+  if (restoringId) {
+    return;
+  }
+
+  setPatientToRestore(null);
+}
+
+async function confirmRestore() {
+  if (!patientToRestore || restoringId) {
+    return;
+  }
+
+  const patient = patientToRestore;
+
+  setError(null);
+  setSuccess(null);
+  setRestoringId(patient.id);
+
+  try {
+    await restorePatient(patient.id);
+    setPatientToRestore(null);
+    await load(appliedQuery, statusFilter);
+    setSuccess(`Paciente “${patient.name}” reativado com sucesso.`);
+  } catch {
+    setError(
+      "Não foi possível reativar o paciente. Tente novamente em alguns instantes.",
+    );
+  } finally {
+    setRestoringId(null);
+  }
+}
 
   function handleSearch() {
     if (loading) {
@@ -416,6 +459,7 @@ export function PatientList() {
           const createdAt = formatCreatedAt(patient.created_at);
           const isArchived = patient.status === "archived";
           const isArchiving = archivingId === patient.id;
+          const isRestoring = restoringId === patient.id;
 
           return (
             <div
@@ -468,28 +512,39 @@ export function PatientList() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <button
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                  onClick={() => void handleEdit(patient)}
-                  type="button"
-                >
-                  Editar
-                </button>
-
-                {!isArchived ? (
+                {isArchived ? (
                   <button
-                    className="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={isArchiving}
-                    onClick={() => requestArchive(patient)}
+                    className="rounded-md border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isRestoring}
+                    onClick={() => requestRestore(patient)}
                     type="button"
                   >
-                    {isArchiving ? "Arquivando..." : "Arquivar"}
+                    {isRestoring ? "Reativando..." : "Reativar"}
                   </button>
-                ) : null}
+                ) : (
+                  <>
+                    <button
+                      className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                      onClick={() => void handleEdit(patient)}
+                      type="button"
+                    >
+                      Editar
+                    </button>
+
+                    <button
+                      className="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={isArchiving}
+                      onClick={() => requestArchive(patient)}
+                      type="button"
+                    >
+                      {isArchiving ? "Arquivando..." : "Arquivar"}
+                    </button>
+                  </>
+                )}
               </div>
-            </div>
-          );
-        })}
+              </div>
+              );
+              })}
 
         {patients.length === 0 && !loading && !error ? (
           <div className="px-6 py-10 text-center">
@@ -561,6 +616,56 @@ export function PatientList() {
                 {archivingId
                   ? "Arquivando..."
                   : "Confirmar arquivamento"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {patientToRestore ? (
+        <div
+          aria-labelledby="restore-patient-title"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+          role="dialog"
+        >
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h2
+              className="text-lg font-semibold text-slate-950"
+              id="restore-patient-title"
+            >
+              Reativar paciente
+            </h2>
+
+            <p className="mt-3 text-sm text-slate-600">
+              Deseja reativar o paciente{" "}
+              <strong className="font-semibold text-slate-900">
+                “{patientToRestore.name}”
+              </strong>
+              ?
+            </p>
+
+            <p className="mt-2 text-sm text-slate-500">
+              O paciente voltará para os registros ativos e poderá ser editado e
+              utilizado normalmente no sistema.
+            </p>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={Boolean(restoringId)}
+                onClick={cancelRestore}
+                type="button"
+              >
+                Cancelar
+              </button>
+
+              <button
+                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={Boolean(restoringId)}
+                onClick={() => void confirmRestore()}
+                type="button"
+              >
+                {restoringId ? "Reativando..." : "Confirmar reativação"}
               </button>
             </div>
           </div>

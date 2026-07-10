@@ -259,6 +259,18 @@ export async function archivePatient(id: string): Promise<void> {
   });
 }
 
+export async function restorePatient(id: string): Promise<void> {
+  const csrfToken = await getCsrfToken();
+
+  await request<{ status: string }>(
+    `/patients/${encodeURIComponent(id)}/restore`,
+    {
+      method: "POST",
+      csrfToken,
+    },
+  );
+}
+
 export async function listMaps(params: Record<string, string> = {}): Promise<{ data: MapDraft[]; pagination: Pagination }> {
   return request(`/maps${toQuery(params)}`);
 }
