@@ -180,8 +180,11 @@ final class PatientRepository
         ];
 
         if ($query !== null && trim($query) !== '') {
-            $where[] = '(name LIKE :query OR internal_code LIKE :query)';
-            $filters['query'] = '%' . trim($query) . '%';
+            $queryLike = '%' . trim($query) . '%';
+
+            $where[] = '(name LIKE :query_name OR internal_code LIKE :query_internal_code)';
+            $filters['query_name'] = $queryLike;
+            $filters['query_internal_code'] = $queryLike;
         }
 
         if ($status !== null && $status !== '') {
