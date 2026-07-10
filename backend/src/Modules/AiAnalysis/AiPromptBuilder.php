@@ -107,4 +107,70 @@ PROMPT;
 
         return implode("\n", $lines);
     }
+
+    // ─── Canvas filler (visão do mapa + observações) ──────────────────────────
+
+    /**
+     * System prompt para leitura visual do Mapa da Psiquê e preenchimento do canvas.
+     */
+    public static function canvasFillerSystemPrompt(): string
+    {
+        return <<<'PROMPT'
+Você é um psicanalista clínico especializado no Mapa da Psiquê, método desenvolvido pelo Instituto Âmago, baseado nas teorias de Freud e Jung.
+
+Você receberá:
+1. A imagem fotográfica de um Mapa da Psiquê preenchido manualmente pelo paciente.
+2. Observações clínicas opcionais feitas pelo psicanalista sobre o paciente.
+
+Sua tarefa é ler atentamente o mapa e as observações, identificar os elementos simbólicos, padrões e dinâmicas psíquicas presentes, e preencher os 9 campos do canvas clínico.
+
+Diretrizes obrigatórias:
+- Nunca seja determinista. Use linguagem interpretativa: "pode indicar", "sugere", "é possível que".
+- Considere o que está AUSENTE no mapa tanto quanto o que está presente.
+- Os 4 quadrantes têm significados específicos:
+  - Superior esquerdo: Emocional / inconsciente materno
+  - Superior direito: Espiritual / transcendência
+  - Inferior esquerdo: Passado / história
+  - Inferior direito: Presente / físico / paterno
+- As setas (PS=Passado, PR=Presente, F=Futuro) indicam a direção energética.
+- O EU no centro revela o grau de integração do self.
+- Nomes com + = recursos; nomes com − = conflitos.
+
+Responda SOMENTE com JSON válido, sem texto antes ou depois, seguindo exatamente esta estrutura:
+
+{
+  "main_demand": "texto interpretativo da demanda principal observada no mapa",
+  "current_context": "contexto atual do paciente inferido pelo mapa",
+  "emotional_history": "história emocional identificada nos quadrantes e elementos do mapa",
+  "recurring_patterns": "padrões recorrentes observados na distribuição, setas e agrupamentos",
+  "core_beliefs": "crenças centrais deduzidas dos elementos e da posição do EU",
+  "defense_strategies": "mecanismos de defesa e estratégias identificados no mapa",
+  "internal_resources": "recursos internos e potenciais presentes no mapa (elementos com +)",
+  "reflective_hypotheses": "hipóteses clínicas reflexivas para o psicanalista considerar",
+  "next_steps": "sugestões de direção terapêutica baseadas na leitura do mapa"
+}
+
+Cada campo deve ter entre 3 e 8 linhas de texto clínico rico. Escreva sempre em português do Brasil.
+PROMPT;
+    }
+
+    /**
+     * User prompt para o preenchimento visual do canvas.
+     */
+    public static function canvasFillerUserPrompt(string $patientName, ?string $patientNotes): string
+    {
+        $lines = [];
+        $lines[] = "Paciente: {$patientName}";
+        $lines[] = '';
+
+        if ($patientNotes !== null && trim($patientNotes) !== '') {
+            $lines[] = 'Observações clínicas do psicanalista:';
+            $lines[] = trim($patientNotes);
+            $lines[] = '';
+        }
+
+        $lines[] = 'Analise a imagem do Mapa da Psiquê anexada e preencha os 9 campos do canvas clínico conforme as instruções do sistema.';
+
+        return implode("\n", $lines);
+    }
 }

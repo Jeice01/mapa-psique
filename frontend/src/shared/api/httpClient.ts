@@ -64,6 +64,7 @@ export type MapDraft = {
   reason?: string | null;
   status: string;
   canvas_json?: MapCanvasData | string | null;
+  map_image_path?: string | null;
   created_at?: string;
 };
 
@@ -386,6 +387,53 @@ export async function exportMapPdf(mapId: string): Promise<ExportMapPdfResult> {
   const filename = getFilenameFromContentDisposition(disposition) ?? `mapa-psique-${mapId}.pdf`;
 
   return { blob, filename };
+}
+
+export async function uploadMapImage(mapId: string, file: File): Promise<{ image_path: string }> {
+  const csrfToken = await getCsrfToken();
+  const formData = new FormData();
+  formData.append("map_image", file);
+
+  const response = await fetch(`${apiBaseUrl}/maps/${encodeURIComponent(mapId)}/image`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      "X-CSRF-Token": csrfToken,
+    },
+    body: formData,
+  });
+
+  const data = (await response.json().catch(() => ({}))) as { image_path?: string; message?: string; error?: string };
+
+  if (!response.ok) {
+    throw new ApiError(data.message ?? data.error ?? "Erro ao enviar imagem.", response.status);
+  }
+
+  return { image_path: data.image_path ?? "" };
+}
+
+export async function getMapImageBlob(mapId: string): Promise<Blob> {
+  const response = await fetch(`${apiBaseUrl}/maps/${encodeURIComponent(mapId)}/image`, {
+    method: "GET",
+    credentials: "include",
+    headers: { Accept: "image/*" },
+  });
+
+  if (!response.ok) {
+    throw new ApiError("Imagem do mapa não encontrada.", response.status);
+  }
+
+  return response.blob();
+}
+
+export async function generateMapCanvas(mapId: string): Promise<MapCanvasData> {
+  const csrfToken = await getCsrfToken();
+  const response = await request<{ success: boolean; data: MapCanvasData }>(
+    `/maps/${encodeURIComponent(mapId)}/generate-canvas`,
+    { method: "POST", csrfToken }
+  );
+  return response.data;
 }
 
 export async function getMapAiAnalysis(mapId: string): Promise<AiAnalysis | null> {

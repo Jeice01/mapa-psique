@@ -235,6 +235,27 @@ final class MapService
         }
     }
 
+    /**
+     * Retorna os dados do paciente vinculado ao mapa, verificando ownership.
+     *
+     * @return array<string, mixed>
+     */
+    public function findPatientForMap(string $mapId, string $ownerUserId): array
+    {
+        $map = $this->find($mapId, $ownerUserId);
+
+        if (empty($map['patient_id'])) {
+            throw new InvalidArgumentException('Este mapa não está vinculado a um paciente.');
+        }
+
+        $patient = $this->patients->findByIdAndOwner((string) $map['patient_id'], $ownerUserId);
+
+        if ($patient === null) {
+            throw new InvalidArgumentException('Paciente não encontrado.');
+        }
+
+        return $patient;
+    }
 
     private function valueForFilename(string $value): string
     {

@@ -175,6 +175,14 @@ final class MapRepository
         return $statement->rowCount() > 0;
     }
 
+    public function updateImagePath(string $id, string $relativePath): void
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE maps SET map_image_path = :path, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+        );
+        $stmt->execute(['path' => $relativePath, 'id' => $id]);
+    }
+
     public function beginTransaction(): void
     {
         if (!$this->pdo->inTransaction()) {

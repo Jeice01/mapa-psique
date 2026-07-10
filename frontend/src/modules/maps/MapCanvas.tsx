@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AiAnalysisSection } from "./AiAnalysisSection";
+import { MapImageUpload } from "./MapImageUpload";
 import {
   exportMapCanvasVersionPdf,
   exportMapPdf,
@@ -125,7 +126,13 @@ export function MapCanvas({ map, onSave }: Props) {
   const [exportPdfError, setExportPdfError] = useState<string | null>(null);
   const [exportingVersionPdfId, setExportingVersionPdfId] = useState<string | null>(null);
   const [exportVersionPdfError, setExportVersionPdfError] = useState<string | null>(null);
+  const [hasMapImage, setHasMapImage] = useState<boolean>(!!map.map_image_path);
   const isDirty = serializeCanvas(canvas) !== serializeCanvas(savedCanvas);
+
+  const handleCanvasGeneratedByAi = useCallback((aiCanvas: MapCanvasData) => {
+    setCanvas(aiCanvas);
+    setHasMapImage(true);
+  }, []);
 
   const canvasHasContent = useMemo(() => {
     return Object.values(savedCanvas).some((v) => typeof v === "string" && v.trim() !== "");
@@ -339,6 +346,14 @@ export function MapCanvas({ map, onSave }: Props) {
       {exportPdfError ? (
         <p className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{exportPdfError}</p>
       ) : null}
+
+      <div className="mt-4">
+        <MapImageUpload
+          mapId={map.id}
+          hasMapImage={hasMapImage}
+          onCanvasGenerated={handleCanvasGeneratedByAi}
+        />
+      </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         {fields.map((field) => (

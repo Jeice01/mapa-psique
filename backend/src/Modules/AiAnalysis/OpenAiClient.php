@@ -77,6 +77,63 @@ final class OpenAiClient
     }
 
     /**
+     * Call chat completions with a base64 image + text (GPT-4o vision).
+     * Returns the raw text content (may be JSON or plain text).
+     */
+    public function chatWithVision(string $systemPrompt, string $userText, string $imageBase64, string $mimeType): string
+    {
+        $payload = json_encode([
+            'model'           => $this->textModel,
+            'response_format' => ['type' => 'json_object'],
+            'messages'        => [
+                ['role' => 'system', 'content' => $systemPrompt],
+                [
+                    'role'    => 'user',
+                    'content' => [
+                        [
+                            'type'      => 'image_url',
+                            'image_url' => [
+                                'url'    => "data:{$mimeType};base64,{$imageBase64}",
+                                'detail' => 'high',
+                            ],
+                        ],
+                        [
+                            'type' => 'text',
+                            'text' => $userText,
+                        ],
+                    ],
+                ],
+            ],
+            'max_tokens'  => 4096,
+            'temperature' => 0.7,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        if ($payload === false) {
+            throw new RuntimeException('Failed to encode OpenAI vision request payload.');
+        }
+
+        $response = $this->post('https://api.openai.com/v1/chat/completions', $payload);
+        $data     = json_decode($response, true);
+
+        if (!is_array($data)) {
+            throw new RuntimeException('Invalid JSON response from OpenAI vision.');
+        }
+
+        if (isset($data['error'])) {
+            $errorMessage = (string) ($data['error']['message'] ?? 'unknown OpenAI error');
+            throw new RuntimeException("OpenAI vision error: {$errorMessage}");
+        }
+
+        $content = $data['choices'][0]['message']['content'] ?? null;
+
+        if (!is_string($content)) {
+            throw new RuntimeException('No content in OpenAI vision response.');
+        }
+
+        return $content;
+    }
+
+    /**
      * Generate an image and return it as base64.
      * Supports both DALL-E (dall-e-2, dall-e-3) and gpt-image-* models.
      */

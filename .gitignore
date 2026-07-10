@@ -36,6 +36,8 @@ backend/storage/uploads/*
 !backend/storage/uploads/.gitkeep
 !backend/storage/uploads/ai/
 !backend/storage/uploads/ai/.gitkeep
+!backend/storage/uploads/maps/
+!backend/storage/uploads/maps/.gitkeep
 
 # database dumps and backups
 *.sql.gz
@@ -65,4 +67,10 @@ dumps/
 *secret*
 *secrets*
 cookies.txt
-*cooki
+*cookies*.txt
+
+# editor/system
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
