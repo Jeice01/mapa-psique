@@ -127,6 +127,33 @@ final class PatientController
         }
     }
 
+    public function restore(string $id): JsonResponse
+    {
+        $session = $this->guardMutable();
+
+        if ($session instanceof JsonResponse) {
+            return $session;
+        }
+
+        try {
+            (new PatientService())->restore($id, $session['user_id']);
+
+            Audit::record(
+                'patient.restored',
+                $session['user_id'],
+                'patients',
+                $id,
+                ['status_code' => 200]
+            );
+
+            return JsonResponse::ok(['status' => 'ok']);
+        } catch (InvalidArgumentException) {
+            return JsonResponse::error('Patient not found', 404);
+        } catch (Throwable) {
+            return JsonResponse::error('Could not restore patient', 500);
+        }
+    }
+
     /**
      * @return array{user_id:string, role:string, authenticated_at:int, expires_at:int}|JsonResponse
      */

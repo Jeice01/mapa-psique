@@ -90,6 +90,13 @@ final class PatientService
         }
     }
 
+    public function restore(string $id, string $ownerUserId): void
+    {
+        if (!$this->patients->restoreByOwner($id, $ownerUserId)) {
+            throw new InvalidArgumentException('Patient not found');
+        }
+    }
+
     /**
      * @param array<string, mixed> $payload
      * @return array<string, mixed>

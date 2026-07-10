@@ -68,6 +68,7 @@ $router->post('/api/patients', [PatientController::class, 'create']);
 $router->get('/api/patients/{id}', [PatientController::class, 'show']);
 $router->put('/api/patients/{id}', [PatientController::class, 'update']);
 $router->delete('/api/patients/{id}', [PatientController::class, 'delete']);
+$router->post('/api/patients/{id}/restore', [PatientController::class, 'restore']);
 
 $router->get('/api/maps', [MapController::class, 'index']);
 $router->post('/api/maps', [MapController::class, 'create']);

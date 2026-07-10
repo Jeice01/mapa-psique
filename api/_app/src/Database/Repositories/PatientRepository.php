@@ -169,6 +169,28 @@ final class PatientRepository
         return $statement->rowCount() > 0;
     }
 
+    public function restoreByOwner(string $id, string $ownerUserId): bool
+    {
+        $statement = $this->pdo->prepare(
+            "UPDATE patients
+             SET status = 'active',
+                 deleted_at = NULL,
+                 deleted_by = NULL,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id
+               AND owner_user_id = :owner_user_id
+               AND status = 'archived'
+               AND deleted_at IS NOT NULL"
+        );
+
+        $statement->execute([
+            'id' => $id,
+            'owner_user_id' => $ownerUserId,
+        ]);
+
+        return $statement->rowCount() > 0;
+    }
+
     /**
      * @param array<string, mixed> $filters
      */
