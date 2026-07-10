@@ -16,6 +16,7 @@ use App\Modules\Consents\ConsentController;
 use App\Modules\Dashboard\DashboardController;
 use App\Modules\Maps\MapImageController;
 use App\Modules\Maps\MapController;
+use App\Modules\Patients\PatientMapController;
 use App\Modules\Patients\PatientController;
 use App\Support\Env;
 
@@ -71,6 +72,7 @@ $router->post('/api/patients', [PatientController::class, 'create']);
 $router->get('/api/patients/{id}', [PatientController::class, 'show']);
 $router->put('/api/patients/{id}', [PatientController::class, 'update']);
 $router->delete('/api/patients/{id}', [PatientController::class, 'delete']);
+$router->post('/api/patients/{id}/create-map', [PatientMapController::class, 'createMap']);
 $router->post('/api/patients/{id}/restore', [PatientController::class, 'restore']);
 
 $router->get('/api/maps', [MapController::class, 'index']);
