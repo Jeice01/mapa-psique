@@ -20,6 +20,8 @@ type Props = {
   onSave: (payload: Partial<MapDraft>) => Promise<void>;
 };
 
+type VersionFilter = "all" | "backup" | "manual";
+
 const emptyCanvas: MapCanvasData = {
   main_demand: "",
   current_context: "",
@@ -105,6 +107,7 @@ export function MapCanvas({ map, onSave }: Props) {
   const [canvas, setCanvas] = useState<MapCanvasData>(() => normalizeCanvas(map.canvas_json));
   const [savedCanvas, setSavedCanvas] = useState<MapCanvasData>(() => normalizeCanvas(map.canvas_json));
   const [versions, setVersions] = useState<MapCanvasVersion[]>([]);
+  const [versionFilter, setVersionFilter] = useState<VersionFilter>("all");
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [versionsError, setVersionsError] = useState<string | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<MapCanvasVersionDetails | null>(null);
@@ -122,6 +125,18 @@ export function MapCanvas({ map, onSave }: Props) {
   const [exportingVersionPdfId, setExportingVersionPdfId] = useState<string | null>(null);
   const [exportVersionPdfError, setExportVersionPdfError] = useState<string | null>(null);
   const isDirty = serializeCanvas(canvas) !== serializeCanvas(savedCanvas);
+
+  const filteredVersions = versions.filter((version) => {
+    if (versionFilter === "backup") {
+      return isAutomaticBackup(version.summary);
+    }
+
+    if (versionFilter === "manual") {
+      return !isAutomaticBackup(version.summary);
+    }
+
+    return true;
+  });
 
   const loadVersions = useCallback(async () => {
     setVersionsLoading(true);
@@ -150,6 +165,7 @@ export function MapCanvas({ map, onSave }: Props) {
     setExportPdfError(null);
     setExportVersionPdfError(null);
     setExportingVersionPdfId(null);
+    setVersionFilter("all");
   }, [map.canvas_json, map.id]);
 
   useEffect(() => {
@@ -336,9 +352,45 @@ export function MapCanvas({ map, onSave }: Props) {
 
       <section className="mt-5 border-t border-slate-200 pt-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <h4 className="text-sm font-semibold text-slate-950">Histórico do canvas</h4>
+          <div>
+            <h4 className="text-sm font-semibold text-slate-950">Histórico do canvas</h4>
+            {versions.length > 0 ? (
+              <p className="mt-1 text-xs text-slate-500">
+                Exibindo {filteredVersions.length} de {versions.length} versões.
+              </p>
+            ) : null}
+          </div>
+
           {versionsLoading ? <span className="text-xs text-slate-500">Carregando histórico do canvas...</span> : null}
         </div>
+
+        {versions.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              className={versionFilterButtonClassName(versionFilter === "all")}
+              onClick={() => setVersionFilter("all")}
+              type="button"
+            >
+              Todos
+            </button>
+
+            <button
+              className={versionFilterButtonClassName(versionFilter === "backup")}
+              onClick={() => setVersionFilter("backup")}
+              type="button"
+            >
+              Backups automáticos
+            </button>
+
+            <button
+              className={versionFilterButtonClassName(versionFilter === "manual")}
+              onClick={() => setVersionFilter("manual")}
+              type="button"
+            >
+              Snapshots manuais
+            </button>
+          </div>
+        ) : null}
 
         {versionsError ? <p className="mt-2 text-sm text-red-700">{versionsError}</p> : null}
 
@@ -346,9 +398,15 @@ export function MapCanvas({ map, onSave }: Props) {
           <p className="mt-2 text-sm text-slate-500">Nenhuma versão salva ainda. Ao salvar o canvas, o histórico será criado automaticamente.</p>
         ) : null}
 
-        {versions.length > 0 ? (
+        {!versionsLoading && versions.length > 0 && filteredVersions.length === 0 && !versionsError ? (
+          <p className="mt-3 rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-600">
+            Nenhuma versão encontrada para este filtro.
+          </p>
+        ) : null}
+
+        {filteredVersions.length > 0 ? (
           <div className="mt-3 overflow-hidden rounded-md border border-slate-200 bg-white">
-            {versions.map((version) => {
+            {filteredVersions.map((version) => {
               const isSelected = selectedVersion?.id === version.id;
 
               return (
@@ -663,7 +721,17 @@ function versionKindClassName(summary?: string | null): string {
     return `${baseClassName} bg-red-50 text-red-700`;
   }
 
-  return `${baseClassName} bg-slate-50 text-slate-700`;
+  return `${baseClassName} bg-brand-50 text-brand-700`;
+}
+
+function versionFilterButtonClassName(active: boolean): string {
+  const baseClassName = "rounded-md border px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60";
+
+  if (active) {
+    return `${baseClassName} border-brand-600 bg-brand-600 text-white`;
+  }
+
+  return `${baseClassName} border-slate-300 bg-white text-slate-700 hover:border-brand-300 hover:text-brand-800`;
 }
 
 function buildHistoricalPreview(value: unknown): { canvas: MapCanvasData | null; technicalPreview: string | null } {
