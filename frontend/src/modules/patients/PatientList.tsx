@@ -9,6 +9,44 @@ import {
 } from "../../shared/api/httpClient";
 import { PatientForm } from "./PatientForm";
 
+function getStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    active: "Ativo",
+    inactive: "Inativo",
+    archived: "Arquivado",
+  };
+
+  return labels[status] ?? status;
+}
+
+function getStatusClasses(status: string) {
+  const classes: Record<string, string> = {
+    active: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+    inactive: "bg-amber-50 text-amber-700 ring-amber-600/20",
+    archived: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  };
+
+  return classes[status] ?? "bg-slate-100 text-slate-600 ring-slate-500/20";
+}
+
+function formatCreatedAt(createdAt?: string) {
+  if (!createdAt) {
+    return null;
+  }
+
+  const date = new Date(createdAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
 export function PatientList() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [query, setQuery] = useState("");
@@ -184,37 +222,77 @@ export function PatientList() {
       ) : null}
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        {patients.map((patient) => (
-          <div
-            className="flex flex-col gap-3 border-b border-slate-100 p-4 last:border-0 sm:flex-row sm:items-center sm:justify-between"
-            key={patient.id}
-          >
-            <div>
-              <p className="font-medium text-slate-950">{patient.name}</p>
-              <p className="text-sm text-slate-500">
-                {patient.internal_code ?? "Sem código"} · {patient.status}
-              </p>
-            </div>
+        {patients.map((patient) => {
+          const createdAt = formatCreatedAt(patient.created_at);
 
-            <div className="flex gap-2">
-              <button
-                className="rounded-md border border-slate-300 px-3 py-1 text-sm transition hover:bg-slate-50"
-                onClick={() => void handleEdit(patient)}
-                type="button"
-              >
-                Editar
-              </button>
+          return (
+            <div
+              className="flex flex-col gap-4 border-b border-slate-100 p-4 last:border-0 sm:flex-row sm:items-center sm:justify-between"
+              key={patient.id}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate font-semibold text-slate-950">
+                    {patient.name}
+                  </p>
 
-              <button
-                className="rounded-md border border-slate-300 px-3 py-1 text-sm transition hover:bg-slate-50"
-                onClick={() => void handleArchive(patient.id)}
-                type="button"
-              >
-                Arquivar
-              </button>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset ${getStatusClasses(
+                      patient.status,
+                    )}`}
+                  >
+                    {getStatusLabel(patient.status)}
+                  </span>
+                </div>
+
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
+                  <span>
+                    Código:{" "}
+                    <strong className="font-medium text-slate-700">
+                      {patient.internal_code ?? "Não informado"}
+                    </strong>
+                  </span>
+
+                  <span>
+                    Idade:{" "}
+                    <strong className="font-medium text-slate-700">
+                      {patient.age !== null
+                        ? `${patient.age} ${patient.age === 1 ? "ano" : "anos"}`
+                        : "Não informada"}
+                    </strong>
+                  </span>
+
+                  {createdAt ? (
+                    <span>
+                      Cadastrado em:{" "}
+                      <strong className="font-medium text-slate-700">
+                        {createdAt}
+                      </strong>
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  onClick={() => void handleEdit(patient)}
+                  type="button"
+                >
+                  Editar
+                </button>
+
+                <button
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  onClick={() => void handleArchive(patient.id)}
+                  type="button"
+                >
+                  Arquivar
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {patients.length === 0 && !loading && !error ? (
           <div className="px-6 py-10 text-center">
