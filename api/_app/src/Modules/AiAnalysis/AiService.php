@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AiAnalysis;
 
 use App\Database\Repositories\AiAnalysisRepository;
+use App\Modules\Maps\MapImageService;
 use App\Modules\Maps\MapService;
 use InvalidArgumentException;
 use RuntimeException;
@@ -261,5 +262,89 @@ final class AiService
     {
         // backend/storage/uploads/ai/
         return dirname(__DIR__, 4) . '/storage/uploads/ai';
+    }
+
+    // ─── Canvas filler via visão ─────────────────────────────────────────────
+
+    /**
+     * Lê a imagem do mapa via GPT-4o vision + observações do paciente
+     * e retorna os 9 campos do canvas preenchidos pela IA.
+     *
+     * @return array<string, string>
+     */
+    public function generateCanvas(string $mapId, string $ownerUserId): array
+    {
+        $mapService = new MapService();
+        $map        = $mapService->find($mapId, $ownerUserId);
+
+        $imagePath = $map['map_image_path'] ?? null;
+        if ($imagePath === null || $imagePath === '') {
+            throw new InvalidArgumentException('Este mapa não possui imagem do Mapa da Psiquê. Faça o upload primeiro.');
+        }
+
+        // Ler imagem do disco
+        $imageService = new MapImageService();
+        $storageDir   = $imageService->storageDir();
+        $fullPath     = $storageDir . DIRECTORY_SEPARATOR . basename($imagePath);
+
+        if (!file_exists($fullPath)) {
+            throw new RuntimeException('Arquivo de imagem não encontrado no servidor.');
+        }
+
+        $imageContent = file_get_contents($fullPath);
+        if ($imageContent === false) {
+            throw new RuntimeException('Falha ao ler o arquivo de imagem.');
+        }
+
+        $imageBase64 = base64_encode($imageContent);
+        $mimeType    = mime_content_type($fullPath) ?: 'image/jpeg';
+
+        // Observações do paciente (campo notes da tabela patients)
+        $patientNotes = null;
+        $patientName  = $map['patient_name'] ?? 'Paciente';
+        if (!empty($map['patient_id'])) {
+            try {
+                $patient      = $mapService->findPatientForMap($mapId, $ownerUserId);
+                $patientNotes = $patient['notes'] ?? null;
+                $patientName  = $patient['name'] ?? $patientName;
+            } catch (Throwable) {
+                // paciente não encontrado — continua sem observações
+            }
+        }
+
+        $openAi = new OpenAiClient();
+        if (!$openAi->isAvailable()) {
+            throw new RuntimeException('OpenAI não está configurado. Defina OPENAI_API_KEY no .env.');
+        }
+
+        set_time_limit(120);
+
+        $systemPrompt = AiPromptBuilder::canvasFillerSystemPrompt();
+        $userPrompt   = AiPromptBuilder::canvasFillerUserPrompt($patientName, $patientNotes);
+
+        $rawJson = $openAi->chatWithVision($systemPrompt, $userPrompt, $imageBase64, $mimeType);
+
+        // Limpar fences de markdown se presentes
+        $rawJson = (string) preg_replace('/^```(?:json)?\s*/i', '', trim($rawJson));
+        $rawJson = (string) preg_replace('/\s*```$/', '', $rawJson);
+
+        $canvas = json_decode($rawJson, true);
+
+        if (!is_array($canvas)) {
+            throw new RuntimeException('A IA retornou um JSON inválido para o canvas.');
+        }
+
+        $fields = [
+            'main_demand', 'current_context', 'emotional_history', 'recurring_patterns',
+            'core_beliefs', 'defense_strategies', 'internal_resources',
+            'reflective_hypotheses', 'next_steps',
+        ];
+
+        $result = [];
+        foreach ($fields as $field) {
+            $result[$field] = isset($canvas[$field]) ? (string) $canvas[$field] : '';
+        }
+
+        return $result;
     }
 }

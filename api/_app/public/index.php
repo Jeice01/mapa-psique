@@ -10,9 +10,11 @@ use App\Middleware\CorsMiddleware;
 use App\Middleware\RateLimitMiddleware;
 use App\Middleware\SecurityHeadersMiddleware;
 use App\Modules\AiAnalysis\AiController;
+use App\Modules\AiAnalysis\CanvasGeneratorController;
 use App\Modules\Auth\AuthController;
 use App\Modules\Consents\ConsentController;
 use App\Modules\Dashboard\DashboardController;
+use App\Modules\Maps\MapImageController;
 use App\Modules\Maps\MapController;
 use App\Modules\Patients\PatientController;
 use App\Support\Env;
@@ -80,6 +82,9 @@ $router->post('/api/maps/{id}/canvas-versions/{versionId}/restore', [MapControll
 $router->get('/api/maps/{id}/canvas-versions/{versionId}/export/pdf', [MapController::class, 'exportCanvasVersionPdf']);
 
 $router->get('/api/maps/{id}/export/pdf', [MapController::class, 'exportPdf']);
+$router->post('/api/maps/{id}/image', [MapImageController::class, 'upload']);
+$router->get('/api/maps/{id}/image', [MapImageController::class, 'show']);
+$router->post('/api/maps/{id}/generate-canvas', [CanvasGeneratorController::class, 'generate']);
 $router->get('/api/maps/{id}/analysis/image', [AiController::class, 'image']);
 $router->get('/api/maps/{id}/analysis', [AiController::class, 'show']);
 $router->post('/api/maps/{id}/analysis', [AiController::class, 'generate']);
