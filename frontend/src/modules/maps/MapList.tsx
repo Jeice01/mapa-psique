@@ -82,9 +82,14 @@ export function MapList() {
     setMaps((current) => current.map((map) => (map.id === updatedMap.id ? { ...map, ...updatedMap } : map)));
   }
 
-  async function handleArchive(id: string) {
-    await archiveMap(id).catch(() => setError("Nao foi possivel arquivar o mapa."));
-    await load();
+  async function handleDelete(id: string) {
+    if (!window.confirm("Excluir este mapa? Esta ação não pode ser desfeita.")) return;
+    try {
+      await archiveMap(id);
+      setMaps((current) => current.filter((m) => m.id !== id));
+    } catch {
+      setError("Não foi possível excluir o mapa.");
+    }
   }
 
   return (
@@ -115,7 +120,7 @@ export function MapList() {
             <div className="flex flex-wrap gap-2">
               <button className="rounded-md border border-slate-300 px-3 py-1 text-sm" onClick={() => void handleDetails(map)} type="button">Detalhes</button>
               <button className="rounded-md border border-slate-300 px-3 py-1 text-sm" onClick={() => void handleEdit(map)} type="button">Editar</button>
-              <button className="rounded-md border border-slate-300 px-3 py-1 text-sm" onClick={() => void handleArchive(map.id)} type="button">Arquivar</button>
+              <button className="rounded-md border border-red-300 px-3 py-1 text-sm text-red-600 hover:bg-red-50" onClick={() => void handleDelete(map.id)} type="button">Excluir</button>
             </div>
           </div>
         ))}
