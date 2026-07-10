@@ -176,16 +176,7 @@ final class PatientRepository
     {
         $where = [
             'owner_user_id = :owner_user_id',
-            'deleted_at IS NULL',
         ];
-
-        if ($query !== null && trim($query) !== '') {
-            $queryLike = '%' . trim($query) . '%';
-
-            $where[] = '(name LIKE :query_name OR internal_code LIKE :query_internal_code)';
-            $filters['query_name'] = $queryLike;
-            $filters['query_internal_code'] = $queryLike;
-        }
 
         if ($status !== null && $status !== '') {
             if (!in_array($status, self::STATUSES, true)) {
@@ -194,6 +185,18 @@ final class PatientRepository
 
             $where[] = 'status = :status';
             $filters['status'] = $status;
+
+            if ($status !== 'archived') {
+                $where[] = 'deleted_at IS NULL';
+            }
+        }
+
+        if ($query !== null && trim($query) !== '') {
+            $queryLike = '%' . trim($query) . '%';
+
+            $where[] = '(name LIKE :query_name OR internal_code LIKE :query_internal_code)';
+            $filters['query_name'] = $queryLike;
+            $filters['query_internal_code'] = $queryLike;
         }
 
         return 'WHERE ' . implode(' AND ', $where);
