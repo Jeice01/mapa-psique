@@ -40,7 +40,9 @@ final class PatientMapController
             return $session;
         }
 
-        Csrf::validateHeader();
+        if (!Csrf::validate(Csrf::tokenFromRequest())) {
+            return JsonResponse::error('Token CSRF inválido.', 419);
+        }
 
         // 1. Verificar que o paciente pertence ao terapeuta
         $patientRepo = new PatientRepository();
