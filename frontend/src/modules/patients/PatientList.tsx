@@ -9,6 +9,18 @@ import {
 } from "../../shared/api/httpClient";
 import { PatientForm } from "./PatientForm";
 
+type PatientStatusFilter = "" | "active" | "inactive" | "archived";
+
+const statusFilters: Array<{
+  value: PatientStatusFilter;
+  label: string;
+}> = [
+  { value: "", label: "Todos" },
+  { value: "active", label: "Ativos" },
+  { value: "inactive", label: "Inativos" },
+  { value: "archived", label: "Arquivados" },
+];
+
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
     active: "Ativo",
@@ -27,6 +39,42 @@ function getStatusClasses(status: string) {
   };
 
   return classes[status] ?? "bg-slate-100 text-slate-600 ring-slate-500/20";
+}
+
+function getEmptyStateTitle(
+  appliedQuery: string,
+  statusFilter: PatientStatusFilter,
+) {
+  if (appliedQuery) {
+    return `Nenhum paciente encontrado para “${appliedQuery}”.`;
+  }
+
+  const titles: Record<PatientStatusFilter, string> = {
+    "": "Nenhum paciente cadastrado.",
+    active: "Nenhum paciente ativo encontrado.",
+    inactive: "Nenhum paciente inativo encontrado.",
+    archived: "Nenhum paciente arquivado encontrado.",
+  };
+
+  return titles[statusFilter];
+}
+
+function getEmptyStateDescription(
+  appliedQuery: string,
+  statusFilter: PatientStatusFilter,
+) {
+  if (appliedQuery) {
+    return "Confira a escrita do nome ou do código e faça uma nova busca.";
+  }
+
+  const descriptions: Record<PatientStatusFilter, string> = {
+    "": "Cadastre o primeiro paciente para começar.",
+    active: "Não existem pacientes com acompanhamento ativo.",
+    inactive: "Não existem pacientes com acompanhamento inativo.",
+    archived: "Nenhum paciente foi arquivado até o momento.",
+  };
+
+  return descriptions[statusFilter];
 }
 
 function formatCreatedAt(createdAt?: string) {
@@ -51,8 +99,11 @@ export function PatientList() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState<PatientStatusFilter>("");
   const [editing, setEditing] = useState<Patient | null>(null);
-  const [patientToArchive, setPatientToArchive] = useState<Patient | null>(null);
+  const [patientToArchive, setPatientToArchive] =
+    useState<Patient | null>(null);
   const [archivingId, setArchivingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,42 +111,57 @@ export function PatientList() {
   const [loading, setLoading] = useState(false);
   const latestRequestRef = useRef(0);
 
-  const load = useCallback(async (searchText = "") => {
-    const normalizedSearch = searchText.trim();
-    const requestId = latestRequestRef.current + 1;
+  const load = useCallback(
+    async (
+      searchText = "",
+      selectedStatus: PatientStatusFilter = "",
+    ) => {
+      const normalizedSearch = searchText.trim();
+      const requestId = latestRequestRef.current + 1;
+      const params: Record<string, string> = {};
 
-    latestRequestRef.current = requestId;
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await listPatients({ q: normalizedSearch });
-
-      if (requestId !== latestRequestRef.current) {
-        return;
+      if (normalizedSearch) {
+        params.q = normalizedSearch;
       }
 
-      setPatients(response.data);
-      setAppliedQuery(normalizedSearch);
+      if (selectedStatus) {
+        params.status = selectedStatus;
+      }
+
+      latestRequestRef.current = requestId;
+      setLoading(true);
       setError(null);
-    } catch {
-      if (requestId !== latestRequestRef.current) {
-        return;
-      }
 
-      setPatients([]);
-      setError(
-        "Não foi possível carregar os pacientes. Tente novamente em alguns instantes.",
-      );
-    } finally {
-      if (requestId === latestRequestRef.current) {
-        setLoading(false);
+      try {
+        const response = await listPatients(params);
+
+        if (requestId !== latestRequestRef.current) {
+          return;
+        }
+
+        setPatients(response.data);
+        setAppliedQuery(normalizedSearch);
+        setError(null);
+      } catch {
+        if (requestId !== latestRequestRef.current) {
+          return;
+        }
+
+        setPatients([]);
+        setError(
+          "Não foi possível carregar os pacientes. Tente novamente em alguns instantes.",
+        );
+      } finally {
+        if (requestId === latestRequestRef.current) {
+          setLoading(false);
+        }
       }
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
-    void load();
+    void load("", "");
   }, [load]);
 
   async function handleSubmit(payload: Partial<Patient>) {
@@ -113,7 +179,7 @@ export function PatientList() {
 
       setEditing(null);
       setShowForm(false);
-      await load(appliedQuery);
+      await load(appliedQuery, statusFilter);
 
       setSuccess(
         isEditing
@@ -171,7 +237,7 @@ export function PatientList() {
     try {
       await archivePatient(patient.id);
       setPatientToArchive(null);
-      await load(appliedQuery);
+      await load(appliedQuery, statusFilter);
       setSuccess(`Paciente “${patient.name}” arquivado com sucesso.`);
     } catch {
       setError(
@@ -188,7 +254,7 @@ export function PatientList() {
     }
 
     setSuccess(null);
-    void load(query);
+    void load(query, statusFilter);
   }
 
   function handleClearSearch() {
@@ -198,7 +264,17 @@ export function PatientList() {
 
     setQuery("");
     setSuccess(null);
-    void load("");
+    void load("", statusFilter);
+  }
+
+  function handleStatusFilter(nextStatus: PatientStatusFilter) {
+    if (loading || nextStatus === statusFilter) {
+      return;
+    }
+
+    setStatusFilter(nextStatus);
+    setSuccess(null);
+    void load(query, nextStatus);
   }
 
   function handleNewPatient() {
@@ -256,6 +332,33 @@ export function PatientList() {
         >
           Novo paciente
         </button>
+      </div>
+
+      <div
+        aria-label="Filtrar pacientes por status"
+        className="flex flex-wrap gap-2"
+        role="group"
+      >
+        {statusFilters.map((filter) => {
+          const isSelected = statusFilter === filter.value;
+
+          return (
+            <button
+              aria-pressed={isSelected}
+              className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                isSelected
+                  ? "border-brand-600 bg-brand-600 text-white"
+                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+              disabled={loading}
+              key={filter.value || "all"}
+              onClick={() => handleStatusFilter(filter.value)}
+              type="button"
+            >
+              {filter.label}
+            </button>
+          );
+        })}
       </div>
 
       {showForm ? (
@@ -346,7 +449,9 @@ export function PatientList() {
                     Idade:{" "}
                     <strong className="font-medium text-slate-700">
                       {patient.age !== null
-                        ? `${patient.age} ${patient.age === 1 ? "ano" : "anos"}`
+                        ? `${patient.age} ${
+                            patient.age === 1 ? "ano" : "anos"
+                          }`
                         : "Não informada"}
                     </strong>
                   </span>
@@ -389,15 +494,11 @@ export function PatientList() {
         {patients.length === 0 && !loading && !error ? (
           <div className="px-6 py-10 text-center">
             <p className="font-medium text-slate-800">
-              {appliedQuery
-                ? `Nenhum paciente encontrado para “${appliedQuery}”.`
-                : "Nenhum paciente cadastrado."}
+              {getEmptyStateTitle(appliedQuery, statusFilter)}
             </p>
 
             <p className="mt-1 text-sm text-slate-500">
-              {appliedQuery
-                ? "Confira a escrita do nome ou do código e faça uma nova busca."
-                : "Cadastre o primeiro paciente para começar."}
+              {getEmptyStateDescription(appliedQuery, statusFilter)}
             </p>
 
             {appliedQuery ? (
@@ -406,7 +507,7 @@ export function PatientList() {
                 onClick={handleClearSearch}
                 type="button"
               >
-                Mostrar todos os pacientes
+                Limpar busca
               </button>
             ) : null}
           </div>
@@ -437,8 +538,8 @@ export function PatientList() {
             </p>
 
             <p className="mt-2 text-sm text-slate-500">
-              O paciente deixará de aparecer entre os registros ativos, mas seus
-              dados serão preservados no sistema.
+              O paciente deixará de aparecer entre os registros ativos, mas
+              seus dados serão preservados no sistema.
             </p>
 
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -457,7 +558,9 @@ export function PatientList() {
                 onClick={() => void confirmArchive()}
                 type="button"
               >
-                {archivingId ? "Arquivando..." : "Confirmar arquivamento"}
+                {archivingId
+                  ? "Arquivando..."
+                  : "Confirmar arquivamento"}
               </button>
             </div>
           </div>
