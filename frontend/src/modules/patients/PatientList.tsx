@@ -52,6 +52,8 @@ export function PatientList() {
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
   const [editing, setEditing] = useState<Patient | null>(null);
+  const [patientToArchive, setPatientToArchive] = useState<Patient | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -141,18 +143,42 @@ export function PatientList() {
     }
   }
 
-  async function handleArchive(patient: Patient) {
+  function requestArchive(patient: Patient) {
     setError(null);
     setSuccess(null);
+    setPatientToArchive(patient);
+  }
+
+  function cancelArchive() {
+    if (archivingId) {
+      return;
+    }
+
+    setPatientToArchive(null);
+  }
+
+  async function confirmArchive() {
+    if (!patientToArchive || archivingId) {
+      return;
+    }
+
+    const patient = patientToArchive;
+
+    setError(null);
+    setSuccess(null);
+    setArchivingId(patient.id);
 
     try {
       await archivePatient(patient.id);
+      setPatientToArchive(null);
       await load(appliedQuery);
       setSuccess(`Paciente “${patient.name}” arquivado com sucesso.`);
     } catch {
       setError(
         "Não foi possível arquivar o paciente. Tente novamente em alguns instantes.",
       );
+    } finally {
+      setArchivingId(null);
     }
   }
 
@@ -285,6 +311,8 @@ export function PatientList() {
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         {patients.map((patient) => {
           const createdAt = formatCreatedAt(patient.created_at);
+          const isArchived = patient.status === "archived";
+          const isArchiving = archivingId === patient.id;
 
           return (
             <div
@@ -343,13 +371,16 @@ export function PatientList() {
                   Editar
                 </button>
 
-                <button
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                  onClick={() => void handleArchive(patient)}
-                  type="button"
-                >
-                  Arquivar
-                </button>
+                {!isArchived ? (
+                  <button
+                    className="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isArchiving}
+                    onClick={() => requestArchive(patient)}
+                    type="button"
+                  >
+                    {isArchiving ? "Arquivando..." : "Arquivar"}
+                  </button>
+                ) : null}
               </div>
             </div>
           );
@@ -381,6 +412,57 @@ export function PatientList() {
           </div>
         ) : null}
       </div>
+
+      {patientToArchive ? (
+        <div
+          aria-labelledby="archive-patient-title"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+          role="dialog"
+        >
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h2
+              className="text-lg font-semibold text-slate-950"
+              id="archive-patient-title"
+            >
+              Arquivar paciente
+            </h2>
+
+            <p className="mt-3 text-sm text-slate-600">
+              Deseja realmente arquivar o paciente{" "}
+              <strong className="font-semibold text-slate-900">
+                “{patientToArchive.name}”
+              </strong>
+              ?
+            </p>
+
+            <p className="mt-2 text-sm text-slate-500">
+              O paciente deixará de aparecer entre os registros ativos, mas seus
+              dados serão preservados no sistema.
+            </p>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={Boolean(archivingId)}
+                onClick={cancelArchive}
+                type="button"
+              >
+                Cancelar
+              </button>
+
+              <button
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={Boolean(archivingId)}
+                onClick={() => void confirmArchive()}
+                type="button"
+              >
+                {archivingId ? "Arquivando..." : "Confirmar arquivamento"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
