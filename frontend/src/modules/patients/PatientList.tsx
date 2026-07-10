@@ -22,8 +22,8 @@ export function PatientList() {
   const load = useCallback(async (searchText = "") => {
     const normalizedSearch = searchText.trim();
     const requestId = latestRequestRef.current + 1;
-    latestRequestRef.current = requestId;
 
+    latestRequestRef.current = requestId;
     setLoading(true);
     setError(null);
 
@@ -65,7 +65,7 @@ export function PatientList() {
 
       setEditing(null);
       setShowForm(false);
-      await load(query);
+      await load(appliedQuery);
     } catch {
       setError("Não foi possível salvar o paciente.");
     }
@@ -86,32 +86,67 @@ export function PatientList() {
 
     try {
       await archivePatient(id);
-      await load(query);
+      await load(appliedQuery);
     } catch {
       setError("Não foi possível arquivar o paciente.");
     }
+  }
+
+  function handleSearch() {
+    if (loading) {
+      return;
+    }
+
+    void load(query);
+  }
+
+  function handleClearSearch() {
+    if (loading) {
+      return;
+    }
+
+    setQuery("");
+    void load("");
   }
 
   return (
     <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row">
         <input
-          className="flex-1 rounded-md border border-slate-300 px-3 py-2"
+          className="flex-1 rounded-md border border-slate-300 px-3 py-2 disabled:cursor-not-allowed disabled:bg-slate-100"
+          disabled={loading}
           placeholder="Buscar por nome ou código"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              handleSearch();
+            }
+          }}
         />
 
         <button
-          className="rounded-md border border-slate-300 px-4 py-2"
-          onClick={() => void load(query)}
+          className="rounded-md border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={loading}
+          onClick={handleSearch}
           type="button"
         >
-          Buscar
+          {loading ? "Buscando..." : "Buscar"}
         </button>
 
+        {query || appliedQuery ? (
+          <button
+            className="rounded-md border border-slate-300 px-4 py-2 text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={loading}
+            onClick={handleClearSearch}
+            type="button"
+          >
+            Limpar busca
+          </button>
+        ) : null}
+
         <button
-          className="rounded-md bg-brand-600 px-4 py-2 font-medium text-white"
+          className="rounded-md bg-brand-600 px-4 py-2 font-medium text-white transition hover:bg-brand-700"
           onClick={() => {
             setEditing(null);
             setShowForm(true);
@@ -125,15 +160,27 @@ export function PatientList() {
       {showForm ? (
         <PatientForm
           patient={editing}
-          onCancel={() => setShowForm(false)}
+          onCancel={() => {
+            setEditing(null);
+            setShowForm(false);
+          }}
           onSubmit={handleSubmit}
         />
       ) : null}
 
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {error ? (
+        <div
+          className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
+          {error}
+        </div>
+      ) : null}
 
       {loading ? (
-        <p className="text-sm text-slate-500">Carregando pacientes...</p>
+        <p className="text-sm text-slate-500" role="status">
+          Carregando pacientes...
+        </p>
       ) : null}
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -151,7 +198,7 @@ export function PatientList() {
 
             <div className="flex gap-2">
               <button
-                className="rounded-md border border-slate-300 px-3 py-1 text-sm"
+                className="rounded-md border border-slate-300 px-3 py-1 text-sm transition hover:bg-slate-50"
                 onClick={() => void handleEdit(patient)}
                 type="button"
               >
@@ -159,7 +206,7 @@ export function PatientList() {
               </button>
 
               <button
-                className="rounded-md border border-slate-300 px-3 py-1 text-sm"
+                className="rounded-md border border-slate-300 px-3 py-1 text-sm transition hover:bg-slate-50"
                 onClick={() => void handleArchive(patient.id)}
                 type="button"
               >
@@ -182,6 +229,16 @@ export function PatientList() {
                 ? "Confira a escrita do nome ou do código e faça uma nova busca."
                 : "Cadastre o primeiro paciente para começar."}
             </p>
+
+            {appliedQuery ? (
+              <button
+                className="mt-4 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                onClick={handleClearSearch}
+                type="button"
+              >
+                Mostrar todos os pacientes
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
