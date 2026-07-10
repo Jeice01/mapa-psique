@@ -93,6 +93,34 @@ export type ExportMapPdfResult = {
   filename: string;
 };
 
+export type AiProfessionalAnalysis = {
+  visao_panoramica: string;
+  analise_freudiana: string;
+  analise_junguiana: string;
+  padroes_e_complexos: string;
+  mecanismos_de_defesa: string;
+  recursos_e_potenciais: string;
+  sintese_energetica: string;
+  diagnostico_do_equilibrio: string;
+  direcao_do_tratamento: string;
+  sintese_clinica_final: string;
+};
+
+export type AiAnalysis = {
+  id: string;
+  map_id: string;
+  professional_analysis: AiProfessionalAnalysis | null;
+  patient_report: string | null;
+  image_path: string | null;
+  image_prompt: string | null;
+  model_text: string | null;
+  model_image: string | null;
+  status: "pending" | "processing" | "completed" | "failed";
+  error_message: string | null;
+  generated_at: string | null;
+  created_at: string;
+};
+
 type Pagination = {
   page: number;
   per_page: number;
@@ -358,6 +386,41 @@ export async function exportMapPdf(mapId: string): Promise<ExportMapPdfResult> {
   const filename = getFilenameFromContentDisposition(disposition) ?? `mapa-psique-${mapId}.pdf`;
 
   return { blob, filename };
+}
+
+export async function getMapAiAnalysis(mapId: string): Promise<AiAnalysis | null> {
+  const response = await request<{ success: boolean; data: AiAnalysis | null }>(
+    `/maps/${encodeURIComponent(mapId)}/analysis`
+  );
+
+  return response.data;
+}
+
+export async function generateMapAiAnalysis(mapId: string): Promise<AiAnalysis> {
+  const csrfToken = await getCsrfToken();
+  const response = await request<{ success: boolean; message: string; data: AiAnalysis }>(
+    `/maps/${encodeURIComponent(mapId)}/analysis`,
+    {
+      method: "POST",
+      csrfToken,
+    }
+  );
+
+  return response.data;
+}
+
+export async function getMapAiAnalysisImageBlob(mapId: string): Promise<Blob> {
+  const response = await fetch(`${apiBaseUrl}/maps/${encodeURIComponent(mapId)}/analysis/image`, {
+    method: "GET",
+    credentials: "include",
+    headers: { Accept: "image/png" },
+  });
+
+  if (!response.ok) {
+    throw new ApiError("Não foi possível carregar a imagem do infográfico.", response.status);
+  }
+
+  return response.blob();
 }
 
 export async function archiveMap(id: string): Promise<void> {

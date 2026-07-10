@@ -1,4 +1,5 @@
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AiAnalysisSection } from "./AiAnalysisSection";
 import {
   exportMapCanvasVersionPdf,
   exportMapPdf,
@@ -125,6 +126,10 @@ export function MapCanvas({ map, onSave }: Props) {
   const [exportingVersionPdfId, setExportingVersionPdfId] = useState<string | null>(null);
   const [exportVersionPdfError, setExportVersionPdfError] = useState<string | null>(null);
   const isDirty = serializeCanvas(canvas) !== serializeCanvas(savedCanvas);
+
+  const canvasHasContent = useMemo(() => {
+    return Object.values(savedCanvas).some((v) => typeof v === "string" && v.trim() !== "");
+  }, [savedCanvas]);
 
   const filteredVersions = versions.filter((version) => {
     if (versionFilter === "backup") {
@@ -349,6 +354,8 @@ export function MapCanvas({ map, onSave }: Props) {
           </label>
         ))}
       </div>
+
+      <AiAnalysisSection canvasHasContent={canvasHasContent} mapId={map.id} />
 
       <section className="mt-5 border-t border-slate-200 pt-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

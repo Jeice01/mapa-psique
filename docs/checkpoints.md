@@ -457,3 +457,73 @@ Adicionar na interface do mapa/canvas um botão para exportar o mapa atual em PD
 
 ```text
 GET /api/maps/{id}/export/pdf
+```
+
+---
+
+## Prompt 13 — Integração com IA: análise psicanalítica + relatório do paciente + infográfico
+
+**Status:** IMPLEMENTADO — PENDENTE VALIDAÇÃO EM PRODUÇÃO
+
+### Objetivo
+
+Integrar OpenAI (GPT-4o + DALL-E 3) como provedor primário e Anthropic (Claude) como fallback de texto para gerar:
+1. Análise clínica profunda (Freud + Jung) para o psicanalista
+2. Relatório simplificado em linguagem acessível para o paciente
+3. Infográfico simbólico gerado por DALL-E 3 (estilo anime cinematográfico)
+
+### Arquitetura
+
+**Backend — novos arquivos:**
+- `backend/migrations/006_map_ai_analysis.sql` — tabela `map_ai_analyses`
+- `backend/src/Database/Repositories/AiAnalysisRepository.php` — CRUD da análise
+- `backend/src/Modules/AiAnalysis/OpenAiClient.php` — GPT-4o (texto) + DALL-E 3 (imagem)
+- `backend/src/Modules/AiAnalysis/AnthropicClient.php` — Claude (fallback texto)
+- `backend/src/Modules/AiAnalysis/AiPromptBuilder.php` — prompts sistema + usuário
+- `backend/src/Modules/AiAnalysis/AiService.php` — orquestração, fallback, persistência, imagem
+- `backend/src/Modules/AiAnalysis/AiController.php` — HTTP layer
+- `backend/storage/uploads/ai/` — armazenamento das imagens geradas
+
+**Frontend — novos arquivos:**
+- `frontend/src/modules/maps/AiAnalysisSection.tsx` — componente com accordion + tabs
+
+**Arquivos modificados:**
+- `backend/public/index.php` — 3 novas rotas
+- `backend/.env.example` — OPENAI_API_KEY, ANTHROPIC_API_KEY etc.
+- `frontend/src/shared/api/httpClient.ts` — tipos AiAnalysis + 3 funções API
+- `frontend/src/modules/maps/MapCanvas.tsx` — AiAnalysisSection integrada
+
+### Endpoints criados
+
+```text
+GET  /api/maps/{id}/analysis         — retorna análise existente ou null
+POST /api/maps/{id}/analysis         — gera (ou regenera) análise via IA
+GET  /api/maps/{id}/analysis/image   — serve o PNG do infográfico
+```
+
+### Variáveis de ambiente necessárias no servidor
+
+```text
+OPENAI_API_KEY=<chave>
+OPENAI_TEXT_MODEL=gpt-4o
+OPENAI_IMAGE_MODEL=dall-e-3
+ANTHROPIC_API_KEY=<chave>         (opcional — fallback texto)
+ANTHROPIC_TEXT_MODEL=claude-opus-4-8
+```
+
+### Fluxo de geração
+
+1. Frontend chama `POST /api/maps/{id}/analysis` com CSRF
+2. Backend valida ownership e canvas não vazio
+3. Tenta GPT-4o → se falhar, tenta Claude → se ambos falharem, retorna 503
+4. Parseia JSON com `professional_analysis` (10 seções), `patient_report` e `image_prompt`
+5. Chama DALL-E 3 com o `image_prompt` → salva PNG em `storage/uploads/ai/`
+6. Persiste tudo em `map_ai_analyses` (upsert por `map_id`)
+7. Retorna análise completa
+
+### Próxima etapa
+
+- Configurar `OPENAI_API_KEY` (e opcionalmente `ANTHROPIC_API_KEY`) no `.env` do servidor Hostinger
+- Importar migration `006_map_ai_analysis.sql` via phpMyAdmin
+- Fazer build do frontend e deploy na branch `deploy`
+- Validar `POST /api/maps/{id}/analysis` em produção com canvas preenchido

@@ -10,6 +10,7 @@ use App\Middleware\CorsMiddleware;
 use App\Middleware\RateLimitMiddleware;
 use App\Middleware\SecurityHeadersMiddleware;
 use App\Modules\Auth\AuthController;
+use App\Modules\AiAnalysis\AiController;
 use App\Modules\Consents\ConsentController;
 use App\Modules\Dashboard\DashboardController;
 use App\Modules\Maps\MapController;
@@ -79,6 +80,9 @@ $router->post('/api/maps/{id}/canvas-versions/{versionId}/restore', [MapControll
 $router->get('/api/maps/{id}/canvas-versions/{versionId}/export/pdf', [MapController::class, 'exportCanvasVersionPdf']);
 
 $router->get('/api/maps/{id}/export/pdf', [MapController::class, 'exportPdf']);
+$router->get('/api/maps/{id}/analysis/image', [AiController::class, 'image']);
+$router->get('/api/maps/{id}/analysis', [AiController::class, 'show']);
+$router->post('/api/maps/{id}/analysis', [AiController::class, 'generate']);
 $router->get('/api/maps/{id}', [MapController::class, 'show']);
 $router->put('/api/maps/{id}', [MapController::class, 'update']);
 $router->delete('/api/maps/{id}', [MapController::class, 'delete']);
