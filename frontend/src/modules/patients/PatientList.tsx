@@ -12,6 +12,7 @@ import { PatientForm } from "./PatientForm";
 export function PatientList() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [query, setQuery] = useState("");
+  const [appliedQuery, setAppliedQuery] = useState("");
   const [editing, setEditing] = useState<Patient | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +20,7 @@ export function PatientList() {
   const latestRequestRef = useRef(0);
 
   const load = useCallback(async (searchText = "") => {
+    const normalizedSearch = searchText.trim();
     const requestId = latestRequestRef.current + 1;
     latestRequestRef.current = requestId;
 
@@ -26,13 +28,14 @@ export function PatientList() {
     setError(null);
 
     try {
-      const response = await listPatients({ q: searchText.trim() });
+      const response = await listPatients({ q: normalizedSearch });
 
       if (requestId !== latestRequestRef.current) {
         return;
       }
 
       setPatients(response.data);
+      setAppliedQuery(normalizedSearch);
       setError(null);
     } catch {
       if (requestId !== latestRequestRef.current) {
@@ -99,7 +102,11 @@ export function PatientList() {
           onChange={(event) => setQuery(event.target.value)}
         />
 
-        <button className="rounded-md border border-slate-300 px-4 py-2" onClick={() => void load(query)} type="button">
+        <button
+          className="rounded-md border border-slate-300 px-4 py-2"
+          onClick={() => void load(query)}
+          type="button"
+        >
           Buscar
         </button>
 
@@ -115,13 +122,26 @@ export function PatientList() {
         </button>
       </div>
 
-      {showForm ? <PatientForm patient={editing} onCancel={() => setShowForm(false)} onSubmit={handleSubmit} /> : null}
+      {showForm ? (
+        <PatientForm
+          patient={editing}
+          onCancel={() => setShowForm(false)}
+          onSubmit={handleSubmit}
+        />
+      ) : null}
+
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      {loading ? <p className="text-sm text-slate-500">Carregando pacientes...</p> : null}
+
+      {loading ? (
+        <p className="text-sm text-slate-500">Carregando pacientes...</p>
+      ) : null}
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         {patients.map((patient) => (
-          <div className="flex flex-col gap-3 border-b border-slate-100 p-4 last:border-0 sm:flex-row sm:items-center sm:justify-between" key={patient.id}>
+          <div
+            className="flex flex-col gap-3 border-b border-slate-100 p-4 last:border-0 sm:flex-row sm:items-center sm:justify-between"
+            key={patient.id}
+          >
             <div>
               <p className="font-medium text-slate-950">{patient.name}</p>
               <p className="text-sm text-slate-500">
@@ -130,18 +150,40 @@ export function PatientList() {
             </div>
 
             <div className="flex gap-2">
-              <button className="rounded-md border border-slate-300 px-3 py-1 text-sm" onClick={() => void handleEdit(patient)} type="button">
+              <button
+                className="rounded-md border border-slate-300 px-3 py-1 text-sm"
+                onClick={() => void handleEdit(patient)}
+                type="button"
+              >
                 Editar
               </button>
 
-              <button className="rounded-md border border-slate-300 px-3 py-1 text-sm" onClick={() => void handleArchive(patient.id)} type="button">
+              <button
+                className="rounded-md border border-slate-300 px-3 py-1 text-sm"
+                onClick={() => void handleArchive(patient.id)}
+                type="button"
+              >
                 Arquivar
               </button>
             </div>
           </div>
         ))}
 
-        {patients.length === 0 && !loading ? <p className="p-4 text-sm text-slate-500">Nenhum paciente encontrado.</p> : null}
+        {patients.length === 0 && !loading && !error ? (
+          <div className="px-6 py-10 text-center">
+            <p className="font-medium text-slate-800">
+              {appliedQuery
+                ? `Nenhum paciente encontrado para “${appliedQuery}”.`
+                : "Nenhum paciente cadastrado."}
+            </p>
+
+            <p className="mt-1 text-sm text-slate-500">
+              {appliedQuery
+                ? "Confira a escrita do nome ou do código e faça uma nova busca."
+                : "Cadastre o primeiro paciente para começar."}
+            </p>
+          </div>
+        ) : null}
       </div>
     </section>
   );
