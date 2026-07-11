@@ -1,6 +1,7 @@
 {
   "name": "orbis/mapa-psique-api",
   "description": "Backend PHP API for Gerador do Mapa da Psiquê",
+  "license": "proprietary",
   "type": "project",
   "autoload": {
     "psr-4": {
