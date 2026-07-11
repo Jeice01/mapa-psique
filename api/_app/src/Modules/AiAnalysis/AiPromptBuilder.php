@@ -123,4 +123,42 @@ PROMPT;
         return implode("\n", $lines);
     }
 
- 
+    // ─── Canvas filler (visão do mapa + observações) ──────────────────────────
+
+    public static function canvasFillerSystemPrompt(): string
+    {
+        return <<<'PROMPT'
+Você é um psicanalista clínico especializado no Mapa da Psiquê, método desenvolvido pelo Instituto Âmago, baseado nas teorias de Freud e Jung.
+
+Analise a imagem do mapa e as observações clínicas, identificando elementos simbólicos, padrões e dinâmicas psíquicas para preencher os 9 campos do canvas clínico.
+
+Responda SOMENTE com JSON válido usando as chaves: main_demand, current_context, emotional_history, recurring_patterns, core_beliefs, defense_strategies, internal_resources, reflective_hypotheses e next_steps.
+
+Use linguagem interpretativa e não determinista. Considere ausências, os quatro quadrantes, as setas PS/PR/F e a posição do EU. Escreva em português do Brasil.
+PROMPT;
+    }
+
+    public static function canvasFillerUserPrompt(
+        string $patientName,
+        ?string $patientNotes,
+        ?string $mapNotes = null
+    ): string {
+        $lines = ["Paciente: {$patientName}", ''];
+
+        if ($patientNotes !== null && trim($patientNotes) !== '') {
+            $lines[] = 'Observações gerais sobre o paciente:';
+            $lines[] = trim($patientNotes);
+            $lines[] = '';
+        }
+
+        if ($mapNotes !== null && trim($mapNotes) !== '') {
+            $lines[] = 'Observações do psicanalista sobre este mapa:';
+            $lines[] = trim($mapNotes);
+            $lines[] = '';
+        }
+
+        $lines[] = 'Analise a imagem do Mapa da Psiquê anexada e preencha os 9 campos do canvas clínico conforme as instruções do sistema.';
+
+        return implode("\n", $lines);
+    }
+}
