@@ -1,5 +1,7 @@
 # Deploy na Hostinger — Mapa da Psiquê
 
+> Atualizado em 11/07/2026: o deploy automático está ativo na branch `deploy`; o workflow precisa permanecer presente nessa própria branch. A `main` possui CI separado e aprovado para lint, build, Composer, sintaxe PHP e testes de segurança e acesso.
+
 ## 1. Ambientes e repositório
 
 Repositório:

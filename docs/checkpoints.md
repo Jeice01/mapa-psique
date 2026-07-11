@@ -527,3 +527,54 @@ ANTHROPIC_TEXT_MODEL=claude-opus-4-8
 - Importar migration `006_map_ai_analysis.sql` via phpMyAdmin
 - Fazer build do frontend e deploy na branch `deploy`
 - Validar `POST /api/maps/{id}/analysis` em produção com canvas preenchido
+
+---
+
+## 2026-07-11 — Estabilização de PHP, frontend, deploy e CI
+
+### Correções PHP
+
+- arquivos truncados `AiPromptBuilder.php` e `AiService.php` restaurados;
+- métodos de preenchimento do canvas por visão preservados;
+- 54 arquivos PHP validados sem erro de sintaxe;
+- commit `main`: `a9722dc`;
+- commit `deploy`: `a326520`;
+- correção publicada na Hostinger.
+
+### Frontend
+
+- parâmetro não utilizado removido de `ProtectedHomePage.tsx`;
+- ESLint aprovado;
+- TypeScript aprovado;
+- build Vite aprovado;
+- commit `main`: `9554ed8`;
+- commit `deploy`: `756e235`;
+- publicação na Hostinger concluída.
+
+### Deploy
+
+- workflow `.github/workflows/deploy-hostinger.yml` restaurado na branch `deploy`;
+- commit `deploy`: `1f6ea20`;
+- conexão SSH e `git pull origin deploy` validados;
+- primeira tentativa de `ssh-keyscan` falhou por timeout e a reexecução foi aprovada.
+
+### CI
+
+- workflow `.github/workflows/ci.yml` criado na `main`;
+- frontend executa `npm ci`, ESLint e build;
+- backend configura PHP 8.1, valida Composer e sintaxe PHP;
+- commit `main`: `956865d`;
+- primeira execução: frontend aprovado; backend interrompido porque `composer validate --strict` tratou a ausência de `license` como erro;
+- correção aplicada: backend declarado como `proprietary`, mantendo o modo estrito;
+- 12 testes automatizados de segurança e acesso adicionados ao job backend;
+- commit `main`: `2459ed4`;
+- segunda execução aprovada: frontend, Composer, sintaxe PHP e testes concluídos com sucesso;
+- CI considerado estável para o escopo básico atual.
+
+### Segurança, privacidade e IA
+
+- revisão técnica identificou necessidade de validação jurídica do consentimento;
+- dados identificáveis e clínicos ainda podem ser enviados à OpenAI e à Anthropic;
+- retenção, eliminação, direitos do titular e resposta a incidentes ainda não estão implementados;
+- uploads possuem controles básicos, mas precisam de normalização, remoção de metadados, quotas e expurgo;
+- saídas de IA precisam de revisão humana e aprovação clínica formal.

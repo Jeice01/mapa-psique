@@ -1,6 +1,6 @@
 # Mapa da Psiquê
 
-Aplicacao web para profissionais conduzirem a tecnica do Mapa da Psiquê com pacientes, mapas, observacoes, materiais, analise futura por IA e geracao futura de relatorio.
+Aplicação web para profissionais conduzirem a técnica do Mapa da Psiquê com pacientes, canvas versionado, uploads, exportação PDF e análise assistida por IA.
 
 ## Stack oficial
 
@@ -28,10 +28,11 @@ O arquivo `docs/project-context.md` resume a arquitetura oficial, branches, depl
 
 ## Status atual do projeto
 
-Etapa 1 — Fundação: aprovada.
-Etapa 2 — Banco completo: aprovada para avanço, pendente validação real em MySQL/MariaDB.
-Etapa 3 — Autenticação, sessão segura e RBAC: aprovada para avanço, pendente validação real com banco.
-Etapa 4 — Dashboard inicial, pacientes e mapas: em revisão técnica.
+Validado em produção: frontend, API PHP, MySQL/MariaDB, autenticação por sessão, CSRF, pacientes, mapas, canvas, histórico e restauração de versões, exportação PDF, upload de imagens e deploy automático.
+
+Implementado, com validação clínica e de conformidade ainda necessária: análise textual e geração visual por IA, usando OpenAI como provedor primário e Anthropic como fallback de texto.
+
+Pendências prioritárias: testes manuais dos fluxos críticos, testes de integração com banco, política LGPD, retenção e eliminação, proteção adicional de uploads e governança clínica da IA.
 
 ## Estrutura
 
@@ -173,6 +174,9 @@ Importe as migrations nesta ordem:
 2. `backend/migrations/002_complete_schema.sql`
 3. `backend/migrations/003_seed_initial_data.sql`
 4. `backend/migrations/004_password_resets.sql`
+5. `backend/migrations/005_map_canvas_versions.sql`
+6. `backend/migrations/006_map_ai_analysis.sql`
+7. `backend/migrations/007_maps_image_path.sql`
 
 No MySQL/MariaDB da Hostinger via phpMyAdmin, painel da Hostinger ou cliente SQL.
 
@@ -180,16 +184,26 @@ No MySQL/MariaDB da Hostinger via phpMyAdmin, painel da Hostinger ou cliente SQL
 
 Algumas migrations usam triggers e comandos `DELIMITER`. Execute preferencialmente via phpMyAdmin, painel Hostinger ou cliente MySQL/MariaDB. Caso futuramente seja criado um runner PHP/PDO, os blocos de trigger devem ser adaptados.
 
-## Ainda nao implementado
+## Funcionalidades e limites atuais
 
-- Canvas interativo
-- Itens do mapa
-- Setas
-- Upload real
-- Integração OpenAI
-- PDF
-- Relatório clínico
-- Gestão de materiais-base
+Implementado:
+
+- gestão de pacientes e mapas com isolamento por profissional;
+- canvas clínico com histórico, prévia e restauração segura;
+- upload autenticado de imagens JPG, PNG, WebP e GIF, limitado a 10 MB;
+- exportação PDF do mapa atual e de versões históricas;
+- análise assistida por OpenAI, com fallback de texto para Anthropic;
+- relatório simplificado e infográfico gerados por IA;
+- auditoria, consentimento inicial, rate limit, CSRF e RBAC.
+
+Ainda pendente ou incompleto:
+
+- gestão de materiais-base;
+- testes automatizados de integração com MySQL/MariaDB;
+- fluxo completo de direitos do titular, retenção e eliminação;
+- validação jurídica do termo de consentimento;
+- revisão clínica versionada dos prompts e aprovação humana formal;
+- endurecimento do ciclo de vida dos uploads.
 
 ## Cuidados de versionamento
 
@@ -230,6 +244,8 @@ Workflow:
 ```text
 .github/workflows/deploy-hostinger.yml
 ```
+
+O CI de fonte fica em `.github/workflows/ci.yml` e deve validar frontend e backend em pushes e pull requests para `main`. O deploy de produção continua separado e só é acionado por push em `deploy`.
 
 Deploy manual de contingencia:
 

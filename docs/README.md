@@ -33,7 +33,7 @@ Os documentos podem usar as seguintes marcações:
 
 ## Estado atual
 
-A documentação representa o estado conhecido em 10/07/2026. Ela deve ser atualizada sempre que houver alteração relevante em arquitetura, regras de negócio, API, banco, segurança, deploy ou operação.
+A documentação representa o estado conhecido em 11/07/2026. Em caso de divergência histórica, prevalecem `README.md`, `project-context.md`, `09-seguranca-lgpd.md`, `deployment-hostinger.md` e os checkpoints mais recentes.
 
 ## Regra de manutenção
 

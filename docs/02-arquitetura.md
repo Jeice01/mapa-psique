@@ -8,6 +8,8 @@
 > **Backend de produção:** PHP 8.3  
 > **Banco:** MySQL/MariaDB
 
+> **Atualização de 11/07/2026:** a arquitetura ativa inclui upload autenticado, exportação PDF, análise por OpenAI, fallback textual por Anthropic e armazenamento de análises e infográficos. Afirmações posteriores de que arquivos ou IA são apenas estruturas futuras representam o diagnóstico anterior. Consulte `project-context.md` e `09-seguranca-lgpd.md` para o estado vigente e seus riscos.
+
 ---
 
 ## 1. Objetivo

@@ -16,7 +16,18 @@ Registrar melhorias identificadas durante a análise técnica. Este documento n�
 - definir retenção de dados, auditoria e versões;
 - revisar exposição de `/api/db-check`.
 
-## 3. Qualidade e testes
+## 3. Concluído recentemente
+
+- corrigidos os arquivos PHP truncados da análise por IA;
+- ESLint e build do frontend validados;
+- árvore de trabalho limpa e revisada;
+- workflow de deploy restaurado e validado na Hostinger;
+- CI básico criado para frontend e backend;
+- validação Composer estrita estabilizada e 12 testes de segurança e acesso integrados ao CI;
+- upload de imagem, geração assistida do canvas, exportação PDF e análise por IA implementados;
+- migrations 005, 006 e 007 incorporadas ao projeto.
+
+## 4. Qualidade e testes
 
 - testes unitários para services e sanitizadores;
 - testes de integração com MySQL/MariaDB;
@@ -27,7 +38,7 @@ Registrar melhorias identificadas durante a análise técnica. Este documento n�
 - testes de PDF;
 - testes E2E dos fluxos principais.
 
-## 4. Segurança
+## 5. Segurança
 
 - invalidar sessões após redefinição de senha;
 - melhorar política de senha;
@@ -39,7 +50,7 @@ Registrar melhorias identificadas durante a análise técnica. Este documento n�
 - revisar criptografia em repouso e backups;
 - automatizar análise de dependências.
 
-## 5. Banco de dados
+## 6. Banco de dados
 
 - revisar índices duplicados;
 - documentar rollback de migrations;
@@ -50,7 +61,7 @@ Registrar melhorias identificadas durante a análise técnica. Este documento n�
 - criar campo explícito `version_type`;
 - definir limpeza de tokens expirados.
 
-## 6. API
+## 7. API
 
 - padronizar envelopes e erros;
 - documentar contratos com OpenAPI;
@@ -59,7 +70,7 @@ Registrar melhorias identificadas durante a análise técnica. Este documento n�
 - incluir request/correlation ID;
 - definir versionamento da API.
 
-## 7. Frontend e UX
+## 8. Frontend e UX
 
 - roteamento explícito;
 - mensagens de erro mais específicas;
@@ -69,7 +80,7 @@ Registrar melhorias identificadas durante a análise técnica. Este documento n�
 - testes de acessibilidade;
 - recuperação de estado e prevenção de perda não salva.
 
-## 8. Operação e observabilidade
+## 9. Operação e observabilidade
 
 - monitoramento de disponibilidade;
 - logs centralizados;
@@ -80,9 +91,9 @@ Registrar melhorias identificadas durante a análise técnica. Este documento n�
 - health check seguro;
 - runbook operacional.
 
-## 9. CI/CD
+## 10. CI/CD
 
-- automatizar lint e build;
+- ampliar o CI com testes de integração MySQL/MariaDB;
 - executar testes antes da publicação;
 - gerar artefato imutável;
 - validar arquivos sensíveis;
@@ -90,7 +101,7 @@ Registrar melhorias identificadas durante a análise técnica. Este documento n�
 - implantar aprovação manual para produção;
 - automatizar smoke tests e rollback controlado.
 
-## 10. LGPD e governança
+## 11. LGPD e governança
 
 - inventário de dados;
 - bases legais e finalidades;
@@ -100,17 +111,25 @@ Registrar melhorias identificadas durante a análise técnica. Este documento n�
 - registro de operadores e terceiros;
 - revisão jurídica dos termos;
 - governança de IA e revisão clínica.
+- pseudonimização antes do envio aos provedores de IA;
+- contratos, subprocessadores e transferência internacional;
+- normalização, expurgo e remoção de metadados dos uploads;
+- plano e teste de resposta a incidentes.
 
-## 11. Funcionalidades previstas no banco
+## 12. Funcionalidades implementadas com governança pendente
 
-Antes de ativar:
+Já existem no produto, mas exigem validação e controles adicionais:
 
-- Canvas gráfico;
-- itens, setas e notas;
+- canvas e versões históricas;
 - arquivos de mapas;
-- base de conhecimento;
-- análises por IA;
-- templates versionados;
-- guardrails e rastreabilidade.
+- análises e relatórios por IA;
+- infográficos gerados por IA;
+- prompts clínicos definidos em código.
+
+Ainda não implementado:
+
+- gestão de materiais e base de conhecimento;
+- templates clínicos versionados governando o prompt efetivo;
+- guardrails, aprovação humana formal e rastreabilidade clínica completa.
 
 Cada evolução deve ter requisitos, análise de risco, testes, autorização, retenção e documentação próprios.

@@ -10,6 +10,8 @@
 003_seed_initial_data.sql
 004_password_resets.sql
 005_map_canvas_versions.sql
+006_map_ai_analysis.sql
+007_maps_image_path.sql
 ```
 
 A ordem é obrigatória. A migration 002 depende da 001.
@@ -268,7 +270,7 @@ Podem existir:
 - consentimentos;
 - IP e user agent;
 - trilha de auditoria;
-- futuramente arquivos e análises de IA.
+- imagens de mapas, análises profissionais, relatórios do paciente, prompts de imagem e infográficos gerados por IA.
 
 ## 9. Seeds
 

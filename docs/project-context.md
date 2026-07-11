@@ -13,7 +13,7 @@ docs/checkpoints.md
 
 Nome: Gerador do Mapa da Psique.
 
-Aplicacao web para profissionais conduzirem a tecnica do Mapa da Psique com pacientes, mapas, observacoes, materiais, analise futura por IA e geracao futura de relatorio.
+Aplicação web para profissionais conduzirem a técnica do Mapa da Psiquê com pacientes, canvas versionado, upload de mapas, exportação PDF e análise assistida por IA.
 
 Subdominio de producao:
 
@@ -147,6 +147,11 @@ SESSION_LIFETIME_MINUTES=120
 CSRF_ENABLED=true
 MAIL_FROM=no-reply@mapapsique.orbisconect.com
 MAIL_FROM_NAME=Mapa da Psique
+OPENAI_API_KEY=<cadastrado somente no servidor>
+OPENAI_TEXT_MODEL=gpt-4o
+OPENAI_IMAGE_MODEL=dall-e-3
+ANTHROPIC_API_KEY=<opcional; cadastrado somente no servidor>
+ANTHROPIC_TEXT_MODEL=claude-opus-4-8
 ```
 
 Use placeholders na documentacao. Credenciais reais nunca devem ser versionadas.
@@ -182,18 +187,22 @@ Validado em producao:
 - Fluxo de esqueci senha com token por e-mail
 - Deploy automatico via GitHub Actions e SSH
 - Webroot publico protegido
+- Upload autenticado de imagem do mapa
+- Geração assistida do canvas por visão
+- Exportação PDF do mapa e de versões
+- Análise textual por IA com fallback de provedor
+- Infográfico gerado por IA
+- Workflow de CI para `main`
 
-Pendencia conhecida:
+Pendências conhecidas:
 
-- `/api/dashboard` retorna 404; verificar registro da rota futuramente.
-
-Ainda nao implementado:
-
-- Canvas visual/interativo completo
-- Integração OpenAI
-- Upload real de arquivos
-- PDF
-- Relatorio clinico final
+- validar juridicamente o termo de consentimento e a base legal de cada tratamento;
+- implementar direitos do titular, revogação, retenção, anonimização e eliminação;
+- reduzir dados identificáveis enviados aos provedores de IA;
+- formalizar revisão humana e aprovação clínica das saídas de IA;
+- endurecer uploads e excluir arquivos órfãos;
+- ampliar testes automatizados com integração MySQL/MariaDB e fluxos E2E;
+- executar testes manuais completos dos fluxos críticos.
 
 ## Como orientar novos chats
 

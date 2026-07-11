@@ -223,18 +223,25 @@ BinaryResponse
 ResponseInterface
 ```
 
-## 11. Módulos previstos no banco
+## 11. Módulos adicionais
 
-Ainda não confirmados como ativos:
+Ativos:
 
-- Canvas gráfico com itens e setas;
-- notas estruturadas;
-- arquivos por mapa;
-- base de conhecimento;
-- análise por IA;
-- templates de prompt;
-- aprovação clínica;
-- logs de integração com provedor de IA.
+- upload autenticado de imagem por mapa;
+- geração assistida do canvas por visão;
+- análise textual por OpenAI com fallback Anthropic;
+- relatório simplificado para o paciente;
+- infográfico gerado por IA;
+- persistência de modelo, status, prompt de imagem e erro técnico.
+
+Previstos ou incompletos:
+
+- itens e setas como entidades estruturadas;
+- notas estruturadas independentes;
+- base de conhecimento e materiais;
+- template de prompt versionado governando o código efetivo;
+- aprovação clínica formal e rastreabilidade da revisão humana;
+- política de retenção e expurgo de arquivos e análises.
 
 ## 12. Dependências entre módulos
 
@@ -245,6 +252,7 @@ Dashboard → Patients, Maps
 Patients → Users, Audit
 Maps → Patients, Versions, PDF, Audit
 Versions → Maps, Users
+AI Analysis → Maps, OpenAI, Anthropic, Uploads
 ```
 
 ## 13. Pendências

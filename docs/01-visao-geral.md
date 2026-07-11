@@ -5,6 +5,8 @@
 > **Sistema:** Mapa da Psiquê  
 > **Ambiente de produção:** `https://mapapsique.orbisconect.com`
 
+> **Atualização de 11/07/2026:** upload de mapas, exportação PDF e análise assistida por IA já estão implementados. Trechos posteriores que os apresentem como funcionalidades futuras devem ser lidos como histórico anterior a essa atualização. Governança clínica, LGPD, retenção, eliminação e validação completa da IA permanecem pendentes.
+
 ---
 
 ## 1. Objetivo deste documento
