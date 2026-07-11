@@ -267,4 +267,86 @@ final class AiService
     private function imageStorageDir(): string
     {
         // backend/storage/uploads/ai/
-        return dirname(__DIR__
+        return dirname(__DIR__, 4) . '/storage/uploads/ai';
+    }
+
+    /**
+     * Lê a imagem do mapa via visão e retorna os campos do canvas preenchidos.
+     *
+     * @return array<string,string>
+     */
+    public function generateCanvas(string $mapId, string $ownerUserId): array
+    {
+        $mapService = new MapService();
+        $map = $mapService->find($mapId, $ownerUserId);
+        $imagePath = $map['map_image_path'] ?? null;
+
+        if ($imagePath === null || $imagePath === '') {
+            throw new InvalidArgumentException('Este mapa não possui imagem do Mapa da Psiquê. Faça o upload primeiro.');
+        }
+
+        $storageDir = (new MapImageService())->storageDir();
+        $fullPath = $storageDir . DIRECTORY_SEPARATOR . basename((string) $imagePath);
+
+        if (!file_exists($fullPath)) {
+            throw new RuntimeException('Arquivo de imagem não encontrado no servidor.');
+        }
+
+        $mimeType = mime_content_type($fullPath) ?: 'image/jpeg';
+        $imageContent = file_get_contents($fullPath);
+
+        if ($imageContent === false) {
+            throw new RuntimeException('Falha ao ler o arquivo de imagem.');
+        }
+
+        $patientNotes = null;
+        $patientName = (string) ($map['patient_name'] ?? 'Paciente');
+
+        if (!empty($map['patient_id'])) {
+            try {
+                $patient = $mapService->findPatientForMap($mapId, $ownerUserId);
+                $patientNotes = $patient['notes'] ?? null;
+                $patientName = (string) ($patient['name'] ?? $patientName);
+            } catch (Throwable) {
+                // Continua sem observações quando o paciente não for encontrado.
+            }
+        }
+
+        $openAi = new OpenAiClient();
+        if (!$openAi->isAvailable()) {
+            throw new RuntimeException('OpenAI não está configurado. Defina OPENAI_API_KEY no .env.');
+        }
+
+        set_time_limit(120);
+
+        $rawJson = $openAi->chatWithVision(
+            AiPromptBuilder::canvasFillerSystemPrompt(),
+            AiPromptBuilder::canvasFillerUserPrompt(
+                $patientName,
+                is_string($patientNotes) ? $patientNotes : null,
+                !empty($map['reason']) ? (string) $map['reason'] : null
+            ),
+            base64_encode($imageContent),
+            $mimeType
+        );
+
+        $rawJson = (string) preg_replace('/^```(?:json)?\s*/i', '', trim($rawJson));
+        $rawJson = (string) preg_replace('/\s*```$/', '', $rawJson);
+        $canvas = json_decode($rawJson, true);
+
+        if (!is_array($canvas)) {
+            throw new RuntimeException('A IA retornou um JSON inválido para o canvas.');
+        }
+
+        $result = [];
+        foreach ([
+            'main_demand', 'current_context', 'emotional_history', 'recurring_patterns',
+            'core_beliefs', 'defense_strategies', 'internal_resources',
+            'reflective_hypotheses', 'next_steps',
+        ] as $field) {
+            $result[$field] = isset($canvas[$field]) ? (string) $canvas[$field] : '';
+        }
+
+        return $result;
+    }
+}
