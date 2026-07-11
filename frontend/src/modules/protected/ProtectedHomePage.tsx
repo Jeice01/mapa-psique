@@ -27,7 +27,7 @@ export function ProtectedHomePage({ user, onLogout }: Props) {
     onLogout();
   }
 
-  function handleMapCreated(_mapId: string) {
+  function handleMapCreated() {
     setTab("maps");
   }
 
