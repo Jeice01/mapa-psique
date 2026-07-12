@@ -131,6 +131,7 @@ export function MapCanvas({ map, onSave }: Props) {
   const [exportingVersionPdfId, setExportingVersionPdfId] = useState<string | null>(null);
   const [exportVersionPdfError, setExportVersionPdfError] = useState<string | null>(null);
   const [hasMapImage, setHasMapImage] = useState<boolean>(!!map.map_image_path);
+  const [analysisCompleted, setAnalysisCompleted] = useState(false);
   const isDirty = serializeCanvas(canvas) !== serializeCanvas(savedCanvas);
 
   const handleCanvasGeneratedByAi = useCallback((aiCanvas: MapCanvasData) => {
@@ -195,6 +196,7 @@ export function MapCanvas({ map, onSave }: Props) {
     setExportVersionPdfError(null);
     setExportingVersionPdfId(null);
     setVersionFilter("all");
+    setAnalysisCompleted(false);
   }, [map.canvas_json, map.id]);
 
   useEffect(() => {
@@ -383,24 +385,27 @@ export function MapCanvas({ map, onSave }: Props) {
         canvasHasContent={canvasHasContent}
         mapId={map.id}
         onBeforeGenerate={prepareAiGeneration}
+        onCompletedChange={setAnalysisCompleted}
         patientName={map.patient_name ?? undefined}
         readingReviewed={readingReviewed}
       />
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        {fields.map((field) => (
-          <label className="block text-sm font-medium text-slate-700" key={field.key}>
-            {field.label}
-            <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">{field.help}</span>
-            <textarea
-              className="mt-2 min-h-32 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none focus:border-brand-600"
-              placeholder={field.placeholder}
-              value={canvas[field.key]}
-              onChange={(event) => updateField(field.key, event.target.value)}
-            />
-          </label>
-        ))}
-      </div>
+      {analysisCompleted ? (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {fields.map((field) => (
+            <label className="block text-sm font-medium text-slate-700" key={field.key}>
+              {field.label}
+              <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">{field.help}</span>
+              <textarea
+                className="mt-2 min-h-32 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none focus:border-brand-600"
+                placeholder={field.placeholder}
+                value={canvas[field.key]}
+                onChange={(event) => updateField(field.key, event.target.value)}
+              />
+            </label>
+          ))}
+        </div>
+      ) : null}
 
       <section className="mt-5 border-t border-slate-200 pt-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

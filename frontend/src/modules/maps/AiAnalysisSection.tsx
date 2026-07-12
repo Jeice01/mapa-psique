@@ -12,6 +12,7 @@ type Props = {
   readingReviewed: boolean;
   patientName?: string;
   onBeforeGenerate?: () => Promise<void>;
+  onCompletedChange?: (completed: boolean) => void;
 };
 
 type SingleSection = { type: "single"; num: string; key: string; label: string; highlight?: boolean };
@@ -62,7 +63,7 @@ function getText(pa: AiProfessionalAnalysis, key: string): string {
   return ((pa as Record<string, unknown>)[key] as string | undefined) ?? "";
 }
 
-export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, patientName, onBeforeGenerate }: Props) {
+export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, patientName, onBeforeGenerate, onCompletedChange }: Props) {
   const [analysis, setAnalysis]             = useState<AiAnalysis | null>(null);
   const [loading, setLoading]               = useState(false);
   const [loadError, setLoadError]           = useState<string | null>(null);
@@ -174,6 +175,10 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
   const hasPending  = analysis?.status === "pending" || analysis?.status === "processing";
   const pa          = analysis?.professional_analysis ?? null;
   const infographic = pa?.infographic_summary ?? null;
+
+  useEffect(() => {
+    onCompletedChange?.(hasAnalysis);
+  }, [hasAnalysis, onCompletedChange]);
 
   return (
     <section className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-5">
