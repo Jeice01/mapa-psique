@@ -50,10 +50,21 @@ final class AiService
     {
         $map = (new MapService())->find($mapId, $ownerUserId);
 
-        if (!$this->canvasHasContent($this->extractCanvas($map))) {
+        $canvas = $this->extractCanvas($map);
+
+        if (!$this->canvasHasContent($canvas)) {
             throw new InvalidArgumentException(
                 'O canvas deve ter pelo menos um campo preenchido antes de gerar a análise.'
             );
+        }
+
+        $structuredReading = $canvas['structured_reading'] ?? null;
+        if (is_array($structuredReading)) {
+            if (!StructuredReading::isReviewed($structuredReading)) {
+                throw new InvalidArgumentException(
+                    'Revise e confirme a leitura estruturada do mapa antes de gerar a análise completa.'
+                );
+            }
         }
 
         // Extend execution time for AI API calls (timeout up to 150 s)
@@ -73,7 +84,7 @@ final class AiService
 
         try {
             // ── Text generation ───────────────────────────────────────────────
-            $systemPrompt = AiPromptBuilder::systemPrompt();
+            $systemPrompt = AiPromptBuilder::systemPrompt($map);
             $userPrompt   = AiPromptBuilder::userPrompt($map);
             $textResponse = null;
             $modelText    = null;
@@ -215,6 +226,16 @@ final class AiService
             }
         }
 
+        $reading = $canvas['structured_reading'] ?? null;
+        if (is_array($reading)) {
+            if (trim((string) ($reading['summary'] ?? '')) !== '') {
+                return true;
+            }
+            if (!empty($reading['elements']) || !empty($reading['arrows'])) {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -273,7 +294,7 @@ final class AiService
     /**
      * Lê a imagem do mapa via visão e retorna os campos do canvas preenchidos.
      *
-     * @return array<string,string>
+     * @return array<string,mixed>
      */
     public function generateCanvas(string $mapId, string $ownerUserId): array
     {
@@ -338,7 +359,7 @@ final class AiService
             throw new RuntimeException('A IA retornou um JSON inválido para o canvas.');
         }
 
-        $result = [];
+        $result = ['schema_version' => 2];
         foreach ([
             'main_demand', 'current_context', 'emotional_history', 'recurring_patterns',
             'core_beliefs', 'defense_strategies', 'internal_resources',
@@ -347,6 +368,11 @@ final class AiService
             $result[$field] = isset($canvas[$field]) ? (string) $canvas[$field] : '';
         }
 
+        $result['structured_reading'] = StructuredReading::normalizeExtraction(
+            is_array($canvas['structured_reading'] ?? null) ? $canvas['structured_reading'] : []
+        );
+
         return $result;
     }
+
 }
