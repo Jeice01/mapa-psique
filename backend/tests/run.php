@@ -239,6 +239,26 @@ test('knowledge source manifest preserves source roles and fingerprints', static
     assertSame(64, strlen((string) ($manifest['sources'][0]['sha256'] ?? '')));
 });
 
+test('AI worker recovers stale text jobs and separates infographic generation', static function (): void {
+    $worker = file_get_contents(dirname(__DIR__) . '/bin/worker.php');
+    assertTrue(is_string($worker));
+    assertTrue(str_contains($worker, 'requeueStaleProcessing(10)'));
+    assertTrue(str_contains($worker, "a.status = 'pending'"));
+    assertTrue(str_contains($worker, "a.status = 'completed'"));
+    assertTrue(str_contains($worker, 'generateInfographic'));
+});
+
+test('text generation completes before optional image generation', static function (): void {
+    $service = file_get_contents(dirname(__DIR__) . '/src/Modules/AiAnalysis/AiService.php');
+    assertTrue(is_string($service));
+    $generateStart = strpos($service, 'public function generate(');
+    $imageStart = strpos($service, 'public function generateInfographic(');
+    assertTrue(is_int($generateStart) && is_int($imageStart) && $imageStart > $generateStart);
+    $textMethod = substr($service, $generateStart, $imageStart - $generateStart);
+    assertTrue(str_contains($textMethod, "'status'          => 'completed'"));
+    assertTrue(!str_contains($textMethod, 'generateImage('));
+});
+
 $failures = [];
 
 foreach ($tests as $case) {

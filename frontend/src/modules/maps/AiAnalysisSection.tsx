@@ -148,7 +148,7 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
         }
         // status === 'pending' | 'processing' → continua polling
       }
-      setGenerateError("A análise demorou mais que o esperado. Aguarde alguns minutos e atualize a página.");
+      // Mantém o status real retornado pela API; o usuário pode reiniciar manualmente se necessário.
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Não foi possível gerar a análise agora.";
       setGenerateError(message);
@@ -201,7 +201,15 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
             type="button"
             title={!canvasHasContent ? "Preencha ao menos um campo do canvas antes de gerar a análise." : !readingReviewed ? "Revise e confirme a leitura da imagem antes de gerar a análise." : undefined}
           >
-            {preparing ? "Salvando revisão..." : generating ? "Gerando análise..." : hasAnalysis ? "Regenerar análise" : "Gerar análise com IA"}
+            {preparing
+              ? "Salvando revisão..."
+              : generating
+                ? "Gerando análise..."
+                : hasAnalysis
+                  ? "Regenerar análise"
+                  : hasPending
+                    ? "Reiniciar análise"
+                    : "Gerar análise com IA"}
           </button>
         </div>
       </div>
@@ -249,8 +257,12 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
 
       {hasPending && !generating ? (
         <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-800">A análise continua em processamento.</p>
-          <p className="mt-1 text-xs text-amber-700">Atualize a página em alguns minutos para consultar o resultado.</p>
+          <p className="text-sm font-medium text-amber-800">
+            {analysis?.status === "pending" ? "A análise está aguardando o worker." : "A IA está gerando o relatório textual."}
+          </p>
+          <p className="mt-1 text-xs text-amber-700">
+            O status é atualizado automaticamente. Se permanecer assim por muito tempo, use “Reiniciar análise”.
+          </p>
         </div>
       ) : null}
 
@@ -483,6 +495,12 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
                     </div>
                   ) : null}
                 </div>
+              ) : null}
+
+              {analysis?.image_prompt && analysis.model_image === "failed" ? (
+                <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  O relatório textual foi concluído, mas o infográfico não pôde ser gerado. O conteúdo clínico permanece disponível.
+                </p>
               ) : null}
             </div>
           ) : null}

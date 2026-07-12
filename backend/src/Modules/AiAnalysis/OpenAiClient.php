@@ -47,7 +47,7 @@ final class OpenAiClient
                 ['role' => 'system', 'content' => $systemPrompt],
                 ['role' => 'user',   'content' => $userMessage],
             ],
-            'max_tokens'  => 8000,
+            'max_tokens'  => 6000,
             'temperature' => 0.7,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
@@ -196,7 +196,7 @@ final class OpenAiClient
                 'Content-Type: application/json',
                 'Authorization: Bearer ' . $this->apiKey,
             ],
-            CURLOPT_TIMEOUT        => 120,
+            CURLOPT_TIMEOUT        => 45,
             CURLOPT_CONNECTTIMEOUT => 15,
         ]);
 

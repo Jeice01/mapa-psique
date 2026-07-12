@@ -93,8 +93,8 @@ final class AiService
             }
         }
 
-        // Extend execution time for AI API calls (timeout up to 150 s)
-        set_time_limit(150);
+        // Hostinger encerra tarefas longas; mantenha a chamada dentro de uma janela curta.
+        set_time_limit(55);
 
         $openAi    = new OpenAiClient();
         $anthropic = new AnthropicClient();
@@ -115,19 +115,37 @@ final class AiService
             $userPrompt   = AiPromptBuilder::userPrompt($map);
             $textResponse = null;
             $modelText    = null;
+            $openAiFailure = null;
 
             if ($openAi->isAvailable()) {
+                $startedAt = microtime(true);
                 try {
                     $textResponse = $openAi->chat($systemPrompt, $userPrompt);
                     $modelText    = $openAi->getTextModel();
-                } catch (Throwable) {
-                    // Fall through to Anthropic
+                    self::logProvider('openai', 'text', $mapId, $startedAt, null);
+                } catch (Throwable $exception) {
+                    self::logProvider('openai', 'text', $mapId, $startedAt, $exception);
+                    $openAiFailure = $exception;
                 }
             }
 
             if ($textResponse === null && $anthropic->isAvailable()) {
-                $textResponse = $anthropic->chat($systemPrompt, $userPrompt);
-                $modelText    = $anthropic->getModel();
+                if ($openAiFailure !== null && (microtime(true) - $startedAt) >= 8) {
+                    throw new RuntimeException(
+                        'A OpenAI excedeu a janela segura do servidor; tente novamente.',
+                        0,
+                        $openAiFailure
+                    );
+                }
+                $startedAt = microtime(true);
+                try {
+                    $textResponse = $anthropic->chat($systemPrompt, $userPrompt);
+                    $modelText    = $anthropic->getModel();
+                    self::logProvider('anthropic', 'text', $mapId, $startedAt, null);
+                } catch (Throwable $exception) {
+                    self::logProvider('anthropic', 'text', $mapId, $startedAt, $exception);
+                    throw $exception;
+                }
             }
 
             if ($textResponse === null) {
@@ -151,30 +169,16 @@ final class AiService
                 $professionalAnalysis['infographic_summary'] = $infographicSummary;
             }
 
-            // ── Image generation (optional — graceful degradation) ─────────────
-            $imagePath  = null;
-            $modelImage = null;
-
-            if ($imagePrompt !== '' && $openAi->isAvailable()) {
-                try {
-                    $b64Image   = $openAi->generateImage($imagePrompt);
-                    $imagePath  = $this->saveImage($mapId, $b64Image);
-                    $modelImage = $openAi->getImageModel();
-                } catch (Throwable) {
-                    // Image is optional — continue without it
-                }
-            }
-
             // ── Persist ───────────────────────────────────────────────────────
             $this->repository->upsert($mapId, [
                 'professional_analysis' => is_array($professionalAnalysis)
                     ? json_encode($professionalAnalysis, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
                     : null,
                 'patient_report'  => $patientReport !== '' ? $patientReport : null,
-                'image_path'      => $imagePath,
+                'image_path'      => null,
                 'image_prompt'    => $imagePrompt !== '' ? $imagePrompt : null,
                 'model_text'      => $modelText,
-                'model_image'     => $modelImage,
+                'model_image'     => null,
                 'status'          => 'completed',
                 'error_message'   => null,
                 'generated_at'    => date('Y-m-d H:i:s'),
@@ -211,6 +215,36 @@ final class AiService
         }
 
         return $this->findAnalysis($mapId, $ownerUserId) ?? [];
+    }
+
+    public function generateInfographic(string $mapId, string $ownerUserId): void
+    {
+        (new MapService())->find($mapId, $ownerUserId);
+        $analysis = $this->repository->findByMapId($mapId);
+        $prompt = trim((string) ($analysis['image_prompt'] ?? ''));
+
+        if ($analysis === null || $analysis['status'] !== 'completed' || $prompt === '') {
+            throw new RuntimeException('Relatório textual ou prompt visual indisponível.');
+        }
+
+        $openAi = new OpenAiClient();
+        if (!$openAi->isAvailable()) {
+            throw new RuntimeException('OpenAI não configurada para gerar o infográfico.');
+        }
+
+        set_time_limit(55);
+        $startedAt = microtime(true);
+        try {
+            $imagePath = $this->saveImage($mapId, $openAi->generateImage($prompt));
+            $this->repository->updateImageResult($mapId, [
+                'image_path' => $imagePath,
+                'model_image' => $openAi->getImageModel(),
+            ]);
+            self::logProvider('openai', 'image', $mapId, $startedAt, null);
+        } catch (Throwable $exception) {
+            self::logProvider('openai', 'image', $mapId, $startedAt, $exception);
+            throw $exception;
+        }
     }
 
     /**
@@ -336,6 +370,24 @@ final class AiService
     {
         // backend/storage/uploads/ai/
         return dirname(__DIR__, 4) . '/storage/uploads/ai';
+    }
+
+    private static function logProvider(
+        string $provider,
+        string $operation,
+        string $mapId,
+        float $startedAt,
+        ?Throwable $exception
+    ): void {
+        error_log(sprintf(
+            'ai_provider_call provider=%s operation=%s map=%s duration_ms=%d result=%s%s',
+            $provider,
+            $operation,
+            $mapId,
+            (int) round((microtime(true) - $startedAt) * 1000),
+            $exception === null ? 'success' : 'error',
+            $exception === null ? '' : ' message=' . $exception->getMessage()
+        ));
     }
 
     /**

@@ -36,7 +36,7 @@ final class AnthropicClient
     {
         $payload = json_encode([
             'model'      => $this->model,
-            'max_tokens' => 8000,
+            'max_tokens' => 6000,
             'system'     => $systemPrompt,
             'messages'   => [
                 ['role' => 'user', 'content' => $userMessage],
@@ -89,7 +89,7 @@ final class AnthropicClient
                 'x-api-key: ' . $this->apiKey,
                 'anthropic-version: 2023-06-01',
             ],
-            CURLOPT_TIMEOUT        => 120,
+            CURLOPT_TIMEOUT        => 45,
             CURLOPT_CONNECTTIMEOUT => 15,
         ]);
 
