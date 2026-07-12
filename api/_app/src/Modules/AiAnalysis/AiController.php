@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\AiAnalysis;
 
+use App\Database\Repositories\AiAnalysisRepository;
+use App\Http\BackgroundJobResponse;
 use App\Http\BinaryResponse;
 use App\Http\JsonResponse;
 use App\Http\ResponseInterface;
@@ -44,9 +46,10 @@ final class AiController
 
     /**
      * POST /api/maps/{id}/analysis
-     * Triggers (or regenerates) the AI analysis for the given map.
+     * Validates synchronously, marks as processing, then generates in background
+     * via fastcgi_finish_request() to bypass nginx 60 s gateway timeout.
      */
-    public function generate(string $id): JsonResponse
+    public function generate(string $id): ResponseInterface
     {
         $session = AccessGuard::require(['profissional']);
 
@@ -58,33 +61,40 @@ final class AiController
             return JsonResponse::error('Invalid CSRF token', 419);
         }
 
+        // Fast synchronous validation (no AI calls)
         try {
-            $analysis = (new AiService())->generate($id, $session['user_id']);
-
-            Audit::record(
-                'map.ai_analysis_generated',
-                $session['user_id'],
-                'maps',
-                $id,
-                ['status_code' => 200, 'model_text' => $analysis['model_text'] ?? null]
-            );
-
-            return JsonResponse::ok([
-                'success' => true,
-                'message' => 'Análise gerada com sucesso.',
-                'data'    => $analysis,
-            ]);
+            (new AiService())->validateForGeneration($id, $session['user_id']);
         } catch (InvalidArgumentException $exception) {
             return JsonResponse::error($exception->getMessage(), 400);
-        } catch (RuntimeException $runtimeEx) {
-            $prev = $runtimeEx->getPrevious();
-            $detail = $prev
-                ? get_class($prev) . ': ' . $prev->getMessage()
-                : $runtimeEx->getMessage();
-            return JsonResponse::error('Erro: ' . $detail, 503);
         } catch (Throwable) {
-            return JsonResponse::error('Erro interno ao gerar a análise.', 500);
+            return JsonResponse::error('Erro ao validar o mapa.', 500);
         }
+
+        // Mark as processing so frontend can start polling
+        (new AiAnalysisRepository())->upsert($id, ['status' => 'processing']);
+
+        $userId = $session['user_id'];
+        $mapId  = $id;
+
+        $body = (string) json_encode(
+            ['success' => true, 'message' => 'Análise iniciada.', 'data' => ['status' => 'processing']],
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        );
+
+        return new BackgroundJobResponse($body, 200, function () use ($mapId, $userId): void {
+            try {
+                $analysis = (new AiService())->generate($mapId, $userId);
+                Audit::record(
+                    'map.ai_analysis_generated',
+                    $userId,
+                    'maps',
+                    $mapId,
+                    ['status_code' => 200, 'model_text' => $analysis['model_text'] ?? null]
+                );
+            } catch (Throwable) {
+                // AiService already persists status = 'failed' in DB
+            }
+        });
     }
 
     /**

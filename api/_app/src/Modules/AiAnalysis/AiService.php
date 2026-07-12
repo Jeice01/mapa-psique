@@ -46,6 +46,32 @@ final class AiService
      * @throws InvalidArgumentException if canvas is empty or map not found
      * @throws RuntimeException if no AI provider is configured or both fail
      */
+
+    /**
+     * Fast synchronous validation — no AI calls.
+     * Called by AiController before kicking off background generation.
+     *
+     * @throws InvalidArgumentException
+     */
+    public function validateForGeneration(string $mapId, string $ownerUserId): void
+    {
+        $map    = (new MapService())->find($mapId, $ownerUserId);
+        $canvas = $this->extractCanvas($map);
+
+        if (!$this->canvasHasContent($canvas)) {
+            throw new InvalidArgumentException(
+                'O canvas deve ter pelo menos um campo preenchido antes de gerar a análise.'
+            );
+        }
+
+        $structuredReading = $canvas['structured_reading'] ?? null;
+        if (is_array($structuredReading) && !StructuredReading::isReviewed($structuredReading)) {
+            throw new InvalidArgumentException(
+                'Revise e confirme a leitura estruturada do mapa antes de gerar a análise completa.'
+            );
+        }
+    }
+
     public function generate(string $mapId, string $ownerUserId): array
     {
         $map = (new MapService())->find($mapId, $ownerUserId);
