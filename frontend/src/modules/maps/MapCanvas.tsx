@@ -139,12 +139,12 @@ export function MapCanvas({ map, onSave }: Props) {
   }, []);
 
   const canvasHasContent = useMemo(() => {
-    const hasText = fields.some((field) => savedCanvas[field.key].trim() !== "");
-    const reading = savedCanvas.structured_reading;
+    const hasText = fields.some((field) => canvas[field.key].trim() !== "");
+    const reading = canvas.structured_reading;
 
     return hasText || !!reading?.summary.trim() || (reading?.elements.length ?? 0) > 0 || (reading?.arrows.length ?? 0) > 0;
-  }, [savedCanvas]);
-  const readingReviewed = !savedCanvas.structured_reading || savedCanvas.structured_reading.review.status === "reviewed";
+  }, [canvas]);
+  const readingReviewed = !canvas.structured_reading || canvas.structured_reading.review.status === "reviewed";
 
   const filteredVersions = versions.filter((version) => {
     if (versionFilter === "backup") {
@@ -170,6 +170,15 @@ export function MapCanvas({ map, onSave }: Props) {
       setVersionsLoading(false);
     }
   }, [map.id]);
+
+  const prepareAiGeneration = useCallback(async () => {
+    if (!isDirty) return;
+
+    await onSave({ canvas_json: canvas });
+    setSavedCanvas(canvas);
+    setSaveState("saved");
+    void loadVersions();
+  }, [canvas, isDirty, loadVersions, onSave]);
 
   useEffect(() => {
     const normalizedCanvas = normalizeCanvas(map.canvas_json);
@@ -363,6 +372,21 @@ export function MapCanvas({ map, onSave }: Props) {
         />
       </div>
 
+      {canvas.structured_reading ? (
+        <StructuredMapReview
+          reading={canvas.structured_reading}
+          onChange={(structured_reading) => setCanvas((current) => ({ ...current, schema_version: 2, structured_reading }))}
+        />
+      ) : null}
+
+      <AiAnalysisSection
+        canvasHasContent={canvasHasContent}
+        mapId={map.id}
+        onBeforeGenerate={prepareAiGeneration}
+        patientName={map.patient_name ?? undefined}
+        readingReviewed={readingReviewed}
+      />
+
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         {fields.map((field) => (
           <label className="block text-sm font-medium text-slate-700" key={field.key}>
@@ -377,15 +401,6 @@ export function MapCanvas({ map, onSave }: Props) {
           </label>
         ))}
       </div>
-
-      {canvas.structured_reading ? (
-        <StructuredMapReview
-          reading={canvas.structured_reading}
-          onChange={(structured_reading) => setCanvas((current) => ({ ...current, schema_version: 2, structured_reading }))}
-        />
-      ) : null}
-
-      <AiAnalysisSection canvasHasContent={canvasHasContent} mapId={map.id} patientName={map.patient_name ?? undefined} readingReviewed={readingReviewed} />
 
       <section className="mt-5 border-t border-slate-200 pt-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

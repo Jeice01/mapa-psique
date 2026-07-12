@@ -126,12 +126,13 @@ export function StructuredMapReview({ reading, onChange }: Props) {
 
       <label className="mt-4 block text-sm font-medium text-slate-800">
         Observações e correções do terapeuta
+        <span className="ml-2 text-xs font-normal text-slate-500">Opcional — deixe em branco quando não houver correções.</span>
         <textarea className="mt-2 min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2" value={reading.review.professional_notes} onChange={(event) => onChange({ ...reading, review: { ...reading.review, professional_notes: event.target.value } })} />
       </label>
 
       <label className="mt-4 flex items-start gap-3 rounded-md border border-violet-200 bg-white p-4 text-sm text-slate-800">
         <input checked={reviewed} className="mt-1 h-4 w-4" onChange={(event) => setReviewed(event.target.checked)} type="checkbox" />
-        <span><strong>Confirmo que revisei a leitura da imagem.</strong><span className="mt-1 block text-xs text-slate-600">A análise completa só será liberada depois de salvar o canvas com esta confirmação.</span></span>
+        <span><strong>Confirmo que revisei a leitura da imagem.</strong><span className="mt-1 block text-xs text-slate-600">Ao gerar a análise, esta confirmação e eventuais correções serão salvas automaticamente.</span></span>
       </label>
     </section>
   );

@@ -30,7 +30,16 @@ final class MethodologyContext
             . "\n</metodologia>";
 
         if ($map !== null) {
-            $excerpts = KnowledgeRetriever::relevantExcerpts($map);
+            try {
+                $excerpts = KnowledgeRetriever::relevantExcerpts($map);
+            } catch (\Throwable $exception) {
+                error_log(sprintf(
+                    'ai_knowledge_retrieval_failed type=%s message=%s',
+                    $exception::class,
+                    $exception->getMessage()
+                ));
+                $excerpts = '';
+            }
             if ($excerpts !== '') {
                 $block .= "\n\n<fontes_relevantes>\n"
                     . "Os trechos tipo exemplo_clinico ilustram possibilidades e não podem ser copiados como conclusão.\n\n"
