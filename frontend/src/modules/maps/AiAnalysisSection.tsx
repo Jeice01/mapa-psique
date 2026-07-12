@@ -75,6 +75,7 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
   const [imageLoading, setImageLoading]     = useState(false);
   const [imageError, setImageError]         = useState<string | null>(null);
   const generateInFlight                    = useRef(false);
+  const pollingRunId                        = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,7 +92,7 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
       }
     }
     void load();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; pollingRunId.current += 1; };
   }, [mapId]);
 
   useEffect(() => {
@@ -111,6 +112,7 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
   const handleGenerate = useCallback(async () => {
     if (generateInFlight.current || generating) return;
     generateInFlight.current = true;
+    const runId = ++pollingRunId.current;
     setGenerateError(null);
     try {
       if (onBeforeGenerate) {
@@ -120,16 +122,19 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
       }
       setGenerating(true);
 
-      // POST retorna imediatamente com status 'queued' (worker cron processa em background)
-      await generateMapAiAnalysis(mapId);
+      // POST retorna imediatamente com status 'pending' (worker cron processa em background)
+      const pending = await generateMapAiAnalysis(mapId);
+      setAnalysis(pending);
 
-      // Polling até completar ou falhar (máx ~10 min, intervalo 5 s)
-      // O cron pode demorar até 5 min para iniciar + ~3 min de geração = ~8 min no pior caso
-      const MAX_ATTEMPTS = 120;
-      const INTERVAL_MS  = 5000;
+      // Polling moderado por até ~8,5 min, cancelado ao trocar de mapa/desmontar.
+      const MAX_ATTEMPTS = 36;
       for (let i = 0; i < MAX_ATTEMPTS; i++) {
-        await new Promise<void>((r) => setTimeout(r, INTERVAL_MS));
+        const intervalMs = i < 6 ? 10000 : 15000;
+        await new Promise<void>((r) => setTimeout(r, intervalMs));
+        if (pollingRunId.current !== runId) return;
         const data = await getMapAiAnalysis(mapId);
+        if (pollingRunId.current !== runId) return;
+        setAnalysis(data);
         if (data?.status === "completed") {
           setAnalysis(data);
           setOpenSections(new Set(["01"]));
@@ -140,7 +145,7 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
           setGenerateError(data.error_message ?? "A análise falhou. Tente novamente.");
           return;
         }
-        // status === 'queued' | 'processing' → continua polling
+        // status === 'pending' | 'processing' → continua polling
       }
       setGenerateError("A análise demorou mais que o esperado. Aguarde alguns minutos e atualize a página.");
     } catch (err: unknown) {
@@ -166,6 +171,7 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
 
   const hasAnalysis = analysis?.status === "completed" && analysis.professional_analysis !== null;
   const hasFailed   = analysis?.status === "failed";
+  const hasPending  = analysis?.status === "pending" || analysis?.status === "processing";
   const pa          = analysis?.professional_analysis ?? null;
   const infographic = pa?.infographic_summary ?? null;
 
@@ -223,7 +229,7 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
       ) : null}
 
       {/* Estados vazios / loading / erro */}
-      {!loading && !hasAnalysis && !hasFailed && !generating ? (
+      {!loading && !hasAnalysis && !hasFailed && !hasPending && !generating ? (
         <div className="mt-5 rounded-md border border-dashed border-slate-300 bg-white p-6 text-center">
           <p className="text-sm font-medium text-slate-700">Nenhuma análise gerada ainda.</p>
           <p className="mt-1 text-sm text-slate-500">
@@ -246,6 +252,13 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
           <p className="mt-1 text-xs text-brand-700">
             A geração das 17 seções leva alguns minutos. Não feche esta página.
           </p>
+        </div>
+      ) : null}
+
+      {hasPending && !generating ? (
+        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-amber-800">A análise continua em processamento.</p>
+          <p className="mt-1 text-xs text-amber-700">Atualize a página em alguns minutos para consultar o resultado.</p>
         </div>
       ) : null}
 

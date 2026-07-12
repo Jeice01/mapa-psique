@@ -217,6 +217,7 @@ Write-Host "`n==> Fazendo commit na branch deploy..." -ForegroundColor Cyan
 Push-Location $Worktree
 
 git add `
+    "api/_app/bin/worker.php" `
     "api/_app/src/Database/Repositories/" `
     "api/_app/src/Modules/AiAnalysis/" `
     "api/_app/src/Modules/Maps/MapImageController.php" `

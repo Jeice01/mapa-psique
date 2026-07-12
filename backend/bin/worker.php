@@ -54,10 +54,10 @@ try {
 }
 
 $stmt = $pdo->query(
-    "SELECT a.map_id, m.user_id
+    "SELECT a.map_id, m.owner_user_id AS user_id
      FROM map_ai_analyses a
      JOIN maps m ON m.id = a.map_id
-     WHERE a.status = 'queued'
+     WHERE a.status = 'pending'
      ORDER BY a.created_at ASC
      LIMIT 3"
 );

@@ -44,7 +44,7 @@ final class AiController
     /**
      * POST /api/maps/{id}/analysis
      * Validates synchronously, enqueues the analysis, and returns immediately.
-     * A cron worker (bin/worker.php) picks up 'queued' items and calls AiService::generate().
+     * A cron worker (bin/worker.php) picks up 'pending' items and calls AiService::generate().
      */
     public function generate(string $id): ResponseInterface
     {
@@ -68,12 +68,12 @@ final class AiController
         }
 
         // Enqueue — cron worker processes asynchronously
-        (new AiAnalysisRepository())->upsert($id, ['status' => 'queued']);
+        (new AiAnalysisRepository())->upsert($id, ['status' => 'pending']);
 
         return JsonResponse::ok([
             'success' => true,
             'message' => 'Análise enfileirada.',
-            'data'    => ['status' => 'queued'],
+            'data'    => ['status' => 'pending'],
         ]);
     }
 
