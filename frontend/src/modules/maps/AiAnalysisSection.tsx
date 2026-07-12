@@ -228,20 +228,7 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
         </div>
       ) : null}
 
-      {/* Estados vazios / loading / erro */}
-      {!loading && !hasAnalysis && !hasFailed && !hasPending && !generating ? (
-        <div className="mt-5 rounded-md border border-dashed border-slate-300 bg-white p-6 text-center">
-          <p className="text-sm font-medium text-slate-700">Nenhuma análise gerada ainda.</p>
-          <p className="mt-1 text-sm text-slate-500">
-            {canvasHasContent && readingReviewed
-              ? "Clique em \"Gerar análise com IA\" para criar o relatório clínico completo (17 seções)."
-              : canvasHasContent
-                ? "Revise, confirme e salve a leitura estruturada da imagem antes de gerar o relatório."
-              : "Preencha ao menos um campo do canvas e salve antes de gerar a análise."}
-          </p>
-        </div>
-      ) : null}
-
+      {/* O relatório só é renderizado após a conclusão; antes disso mostramos apenas andamento/erros. */}
       {loading ? <p className="mt-4 text-sm text-slate-500">Carregando análise...</p> : null}
 
       {generating ? (
