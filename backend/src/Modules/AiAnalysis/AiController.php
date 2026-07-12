@@ -76,9 +76,9 @@ final class AiController
             ]);
         } catch (InvalidArgumentException $exception) {
             return JsonResponse::error($exception->getMessage(), 400);
-        } catch (RuntimeException) {
+        } catch (RuntimeException $runtimeEx) {
             return JsonResponse::error(
-                'Não foi possível gerar a análise agora. Verifique a configuração da IA no servidor.',
+                'Erro: ' . $runtimeEx->getMessage(),
                 503
             );
         } catch (Throwable) {
