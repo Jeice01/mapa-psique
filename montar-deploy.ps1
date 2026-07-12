@@ -51,6 +51,12 @@ Copy-ToWorktree `
     "backend\src\Database\Repositories\MapRepository.php" `
     "api/_app/src/Database/Repositories/MapRepository.php"
 
+# ─── BACKEND: Http ───────────────────────────────────────────────────────────
+Write-Host "`n==> Copiando Http..." -ForegroundColor Cyan
+Copy-ToWorktree `
+    "backend\src\Http\BackgroundJobResponse.php" `
+    "api/_app/src/Http/BackgroundJobResponse.php"
+
 # ─── BACKEND: Modules/AiAnalysis ─────────────────────────────────────────────
 Write-Host "`n==> Copiando Modules/AiAnalysis..." -ForegroundColor Cyan
 $aiFiles = @(

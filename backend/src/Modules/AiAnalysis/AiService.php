@@ -46,6 +46,32 @@ final class AiService
      * @throws InvalidArgumentException if canvas is empty or map not found
      * @throws RuntimeException if no AI provider is configured or both fail
      */
+
+    /**
+     * Fast synchronous validation — no AI calls.
+     * Called by AiController before kicking off background generation.
+     *
+     * @throws InvalidArgumentException
+     */
+    public function validateForGeneration(string $mapId, string $ownerUserId): void
+    {
+        $map    = (new MapService())->find($mapId, $ownerUserId);
+        $canvas = $this->extractCanvas($map);
+
+        if (!$this->canvasHasContent($canvas)) {
+            throw new InvalidArgumentException(
+                'O canvas deve ter pelo menos um campo preenchido antes de gerar a análise.'
+            );
+        }
+
+        $structuredReading = $canvas['structured_reading'] ?? null;
+        if (is_array($structuredReading) && !StructuredReading::isReviewed($structuredReading)) {
+            throw new InvalidArgumentException(
+                'Revise e confirme a leitura estruturada do mapa antes de gerar a análise completa.'
+            );
+        }
+    }
+
     public function generate(string $mapId, string $ownerUserId): array
     {
         $map = (new MapService())->find($mapId, $ownerUserId);
@@ -79,10 +105,11 @@ final class AiService
             );
         }
 
-        // Mark as processing
-        $this->repository->upsert($mapId, ['status' => 'processing']);
-
         try {
+            // Mark as processing inside the guarded block so persistence errors
+            // cannot escape as an opaque HTTP 500.
+            $this->repository->upsert($mapId, ['status' => 'processing']);
+
             // ── Text generation ───────────────────────────────────────────────
             $systemPrompt = AiPromptBuilder::systemPrompt($map);
             $userPrompt   = AiPromptBuilder::userPrompt($map);
@@ -154,13 +181,33 @@ final class AiService
             ]);
 
         } catch (Throwable $exception) {
-            $this->repository->upsert($mapId, [
-                'status'        => 'failed',
-                'error_message' => $exception->getMessage(),
-                'generated_at'  => null,
-            ]);
+            error_log(sprintf(
+                'ai_analysis_generation_failed map=%s type=%s message=%s',
+                $mapId,
+                $exception::class,
+                $exception->getMessage()
+            ));
 
-            throw $exception;
+            try {
+                $this->repository->upsert($mapId, [
+                    'status'        => 'failed',
+                    'error_message' => $exception->getMessage(),
+                    'generated_at'  => null,
+                ]);
+            } catch (Throwable $persistenceException) {
+                error_log(sprintf(
+                    'ai_analysis_failure_persistence_failed map=%s type=%s message=%s',
+                    $mapId,
+                    $persistenceException::class,
+                    $persistenceException->getMessage()
+                ));
+            }
+
+            if ($exception instanceof InvalidArgumentException || $exception instanceof RuntimeException) {
+                throw $exception;
+            }
+
+            throw new RuntimeException('Falha inesperada durante a geração da análise.', 0, $exception);
         }
 
         return $this->findAnalysis($mapId, $ownerUserId) ?? [];

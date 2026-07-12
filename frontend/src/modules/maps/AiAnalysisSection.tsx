@@ -11,6 +11,7 @@ type Props = {
   canvasHasContent: boolean;
   readingReviewed: boolean;
   patientName?: string;
+  onBeforeGenerate?: () => Promise<void>;
 };
 
 type SingleSection = { type: "single"; num: string; key: string; label: string; highlight?: boolean };
@@ -61,11 +62,12 @@ function getText(pa: AiProfessionalAnalysis, key: string): string {
   return ((pa as Record<string, unknown>)[key] as string | undefined) ?? "";
 }
 
-export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, patientName }: Props) {
+export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, patientName, onBeforeGenerate }: Props) {
   const [analysis, setAnalysis]             = useState<AiAnalysis | null>(null);
   const [loading, setLoading]               = useState(false);
   const [loadError, setLoadError]           = useState<string | null>(null);
   const [generating, setGenerating]         = useState(false);
+  const [preparing, setPreparing]           = useState(false);
   const [generateError, setGenerateError]   = useState<string | null>(null);
   const [openSections, setOpenSections]     = useState<Set<string>>(new Set(["01"]));
   const [activeTab, setActiveTab]           = useState<"professional" | "patient">("professional");
@@ -109,21 +111,46 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
   const handleGenerate = useCallback(async () => {
     if (generateInFlight.current || generating) return;
     generateInFlight.current = true;
-    setGenerating(true);
     setGenerateError(null);
     try {
-      const data = await generateMapAiAnalysis(mapId);
-      setAnalysis(data);
-      setOpenSections(new Set(["01"]));
-      setActiveTab("professional");
+      if (onBeforeGenerate) {
+        setPreparing(true);
+        await onBeforeGenerate();
+        setPreparing(false);
+      }
+      setGenerating(true);
+
+      // POST retorna imediatamente com status 'processing' (fire-and-forget no backend)
+      await generateMapAiAnalysis(mapId);
+
+      // Polling até completar ou falhar (máx 3 min, intervalo 4 s)
+      const MAX_ATTEMPTS = 45;
+      const INTERVAL_MS  = 4000;
+      for (let i = 0; i < MAX_ATTEMPTS; i++) {
+        await new Promise<void>((r) => setTimeout(r, INTERVAL_MS));
+        const data = await getMapAiAnalysis(mapId);
+        if (data?.status === "completed") {
+          setAnalysis(data);
+          setOpenSections(new Set(["01"]));
+          setActiveTab("professional");
+          return;
+        }
+        if (data?.status === "failed") {
+          setGenerateError(data.error_message ?? "A análise falhou. Tente novamente.");
+          return;
+        }
+        // status === 'processing' → continua polling
+      }
+      setGenerateError("A análise demorou mais que o esperado. Aguarde e atualize a página.");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Não foi possível gerar a análise agora.";
       setGenerateError(message);
     } finally {
       generateInFlight.current = false;
+      setPreparing(false);
       setGenerating(false);
     }
-  }, [mapId, generating]);
+  }, [mapId, generating, onBeforeGenerate]);
 
   function toggleSection(num: string) {
     setOpenSections((prev) => {
@@ -157,12 +184,12 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
           ) : null}
           <button
             className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={generating || !canvasHasContent || !readingReviewed}
+            disabled={generating || preparing || !canvasHasContent || !readingReviewed}
             onClick={() => void handleGenerate()}
             type="button"
-            title={!canvasHasContent ? "Preencha ao menos um campo do canvas antes de gerar a análise." : !readingReviewed ? "Revise, confirme e salve a leitura da imagem antes de gerar a análise." : undefined}
+            title={!canvasHasContent ? "Preencha ao menos um campo do canvas antes de gerar a análise." : !readingReviewed ? "Revise e confirme a leitura da imagem antes de gerar a análise." : undefined}
           >
-            {generating ? "Gerando análise..." : hasAnalysis ? "Regenerar análise" : "Gerar análise com IA"}
+            {preparing ? "Salvando revisão..." : generating ? "Gerando análise..." : hasAnalysis ? "Regenerar análise" : "Gerar análise com IA"}
           </button>
         </div>
       </div>
