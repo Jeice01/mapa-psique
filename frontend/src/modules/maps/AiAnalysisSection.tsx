@@ -120,12 +120,13 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
       }
       setGenerating(true);
 
-      // POST retorna imediatamente com status 'processing' (fire-and-forget no backend)
+      // POST retorna imediatamente com status 'queued' (worker cron processa em background)
       await generateMapAiAnalysis(mapId);
 
-      // Polling até completar ou falhar (máx 3 min, intervalo 4 s)
-      const MAX_ATTEMPTS = 45;
-      const INTERVAL_MS  = 4000;
+      // Polling até completar ou falhar (máx ~10 min, intervalo 5 s)
+      // O cron pode demorar até 5 min para iniciar + ~3 min de geração = ~8 min no pior caso
+      const MAX_ATTEMPTS = 120;
+      const INTERVAL_MS  = 5000;
       for (let i = 0; i < MAX_ATTEMPTS; i++) {
         await new Promise<void>((r) => setTimeout(r, INTERVAL_MS));
         const data = await getMapAiAnalysis(mapId);
@@ -139,9 +140,9 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
           setGenerateError(data.error_message ?? "A análise falhou. Tente novamente.");
           return;
         }
-        // status === 'processing' → continua polling
+        // status === 'queued' | 'processing' → continua polling
       }
-      setGenerateError("A análise demorou mais que o esperado. Aguarde e atualize a página.");
+      setGenerateError("A análise demorou mais que o esperado. Aguarde alguns minutos e atualize a página.");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Não foi possível gerar a análise agora.";
       setGenerateError(message);
@@ -240,10 +241,10 @@ export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, pa
       {generating ? (
         <div className="mt-4 rounded-md border border-brand-200 bg-brand-50 p-4">
           <p className="text-sm font-medium text-brand-800">
-            A IA está gerando o relatório clínico completo (17 seções)...
+            Análise em fila — o servidor irá processar em instantes...
           </p>
           <p className="mt-1 text-xs text-brand-700">
-            Isso pode levar até 2 minutos. Por favor, aguarde.
+            A geração das 17 seções leva alguns minutos. Não feche esta página.
           </p>
         </div>
       ) : null}

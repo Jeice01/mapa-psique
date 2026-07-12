@@ -51,6 +51,12 @@ Copy-ToWorktree `
     "backend\src\Database\Repositories\MapRepository.php" `
     "api/_app/src/Database/Repositories/MapRepository.php"
 
+# ─── BACKEND: bin/worker.php ─────────────────────────────────────────────────
+Write-Host "`n==> Copiando bin/worker.php..." -ForegroundColor Cyan
+Copy-ToWorktree `
+    "backend\bin\worker.php" `
+    "api/_app/bin/worker.php"
+
 # ─── BACKEND: Http ───────────────────────────────────────────────────────────
 Write-Host "`n==> Copiando Http..." -ForegroundColor Cyan
 Copy-ToWorktree `
