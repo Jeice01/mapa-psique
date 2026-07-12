@@ -20,7 +20,9 @@ type Phase =
   | "guided"
   | "done";
 
-const CANVAS_FIELDS: Array<{ key: keyof MapCanvasData; label: string; hint: string }> = [
+type CanvasTextField = Exclude<keyof MapCanvasData, "schema_version" | "structured_reading">;
+
+const CANVAS_FIELDS: Array<{ key: CanvasTextField; label: string; hint: string }> = [
   {
     key: "main_demand",
     label: "Demanda Principal",

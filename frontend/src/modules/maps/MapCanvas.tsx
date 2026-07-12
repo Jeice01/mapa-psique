@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AiAnalysisSection } from "./AiAnalysisSection";
 import { MapImageUpload } from "./MapImageUpload";
+import { StructuredMapReview } from "./StructuredMapReview";
 import {
   exportMapCanvasVersionPdf,
   exportMapPdf,
@@ -15,6 +16,7 @@ import type {
   MapCanvasVersionDetails,
   MapDraft,
   RestoreMapCanvasVersionResult,
+  StructuredMapReading,
 } from "../../shared/api/httpClient";
 
 type Props = {
@@ -23,8 +25,10 @@ type Props = {
 };
 
 type VersionFilter = "all" | "backup" | "manual";
+type CanvasTextField = Exclude<keyof MapCanvasData, "schema_version" | "structured_reading">;
 
 const emptyCanvas: MapCanvasData = {
+  schema_version: 1,
   main_demand: "",
   current_context: "",
   emotional_history: "",
@@ -36,7 +40,7 @@ const emptyCanvas: MapCanvasData = {
   next_steps: "",
 };
 
-const fields: Array<{ key: keyof MapCanvasData; label: string; help: string; placeholder: string }> = [
+const fields: Array<{ key: CanvasTextField; label: string; help: string; placeholder: string }> = [
   {
     key: "main_demand",
     label: "Queixa ou demanda principal",
@@ -93,7 +97,7 @@ const fields: Array<{ key: keyof MapCanvasData; label: string; help: string; pla
   },
 ];
 
-const historicalPreviewFields: Array<{ key: keyof MapCanvasData; label: string }> = [
+const historicalPreviewFields: Array<{ key: CanvasTextField; label: string }> = [
   { key: "main_demand", label: "Demanda principal" },
   { key: "current_context", label: "Contexto atual" },
   { key: "emotional_history", label: "História emocional" },
@@ -135,8 +139,12 @@ export function MapCanvas({ map, onSave }: Props) {
   }, []);
 
   const canvasHasContent = useMemo(() => {
-    return Object.values(savedCanvas).some((v) => typeof v === "string" && v.trim() !== "");
+    const hasText = fields.some((field) => savedCanvas[field.key].trim() !== "");
+    const reading = savedCanvas.structured_reading;
+
+    return hasText || !!reading?.summary.trim() || (reading?.elements.length ?? 0) > 0 || (reading?.arrows.length ?? 0) > 0;
   }, [savedCanvas]);
+  const readingReviewed = !savedCanvas.structured_reading || savedCanvas.structured_reading.review.status === "reviewed";
 
   const filteredVersions = versions.filter((version) => {
     if (versionFilter === "backup") {
@@ -201,7 +209,7 @@ export function MapCanvas({ map, onSave }: Props) {
     }
   }
 
-  function updateField(key: keyof MapCanvasData, value: string) {
+  function updateField(key: CanvasTextField, value: string) {
     setCanvas((current) => ({ ...current, [key]: value }));
   }
 
@@ -370,7 +378,14 @@ export function MapCanvas({ map, onSave }: Props) {
         ))}
       </div>
 
-      <AiAnalysisSection canvasHasContent={canvasHasContent} mapId={map.id} patientName={map.patient_name ?? undefined} />
+      {canvas.structured_reading ? (
+        <StructuredMapReview
+          reading={canvas.structured_reading}
+          onChange={(structured_reading) => setCanvas((current) => ({ ...current, schema_version: 2, structured_reading }))}
+        />
+      ) : null}
+
+      <AiAnalysisSection canvasHasContent={canvasHasContent} mapId={map.id} patientName={map.patient_name ?? undefined} readingReviewed={readingReviewed} />
 
       <section className="mt-5 border-t border-slate-200 pt-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -682,17 +697,52 @@ function normalizeCanvas(value: MapDraft["canvas_json"]): MapCanvasData {
   }
 
   if (typeof value === "object" && !Array.isArray(value)) {
-    return Object.fromEntries(
-      Object.keys(emptyCanvas).map((key) => {
-        const typedKey = key as keyof MapCanvasData;
-        const fieldValue = value[typedKey];
+    const source = value as Partial<MapCanvasData>;
+    const normalized: MapCanvasData = { ...emptyCanvas };
 
-        return [typedKey, typeof fieldValue === "string" ? fieldValue : ""];
-      })
-    ) as MapCanvasData;
+    for (const field of fields) {
+      const fieldValue = source[field.key];
+      normalized[field.key] = typeof fieldValue === "string" ? fieldValue : "";
+    }
+
+    if (source.structured_reading && typeof source.structured_reading === "object") {
+      normalized.schema_version = 2;
+      normalized.structured_reading = normalizeStructuredReading(source.structured_reading);
+    }
+
+    return normalized;
   }
 
   return { ...emptyCanvas };
+}
+
+function normalizeStructuredReading(value: StructuredMapReading): StructuredMapReading {
+  return {
+    summary: typeof value.summary === "string" ? value.summary : "",
+    self_position: {
+      quadrant: typeof value.self_position?.quadrant === "string" ? value.self_position.quadrant : "centro",
+      position: typeof value.self_position?.position === "string" ? value.self_position.position : "",
+      notes: typeof value.self_position?.notes === "string" ? value.self_position.notes : "",
+      confidence: Number(value.self_position?.confidence ?? 0),
+      x: typeof value.self_position?.x === "number" ? value.self_position.x : null,
+      y: typeof value.self_position?.y === "number" ? value.self_position.y : null,
+    },
+    quadrants: {
+      emocional: typeof value.quadrants?.emocional === "string" ? value.quadrants.emocional : "",
+      espiritual: typeof value.quadrants?.espiritual === "string" ? value.quadrants.espiritual : "",
+      passado: typeof value.quadrants?.passado === "string" ? value.quadrants.passado : "",
+      presente_fisico: typeof value.quadrants?.presente_fisico === "string" ? value.quadrants.presente_fisico : "",
+    },
+    elements: Array.isArray(value.elements) ? value.elements : [],
+    arrows: Array.isArray(value.arrows) ? value.arrows : [],
+    absences: Array.isArray(value.absences) ? value.absences.filter((item): item is string => typeof item === "string") : [],
+    uncertainties: Array.isArray(value.uncertainties) ? value.uncertainties.filter((item): item is string => typeof item === "string") : [],
+    review: {
+      status: value.review?.status === "reviewed" ? "reviewed" : "pending",
+      professional_notes: typeof value.review?.professional_notes === "string" ? value.review.professional_notes : "",
+      reviewed_at: typeof value.review?.reviewed_at === "string" ? value.review.reviewed_at : null,
+    },
+  };
 }
 
 function serializeCanvas(canvas: MapCanvasData): string {

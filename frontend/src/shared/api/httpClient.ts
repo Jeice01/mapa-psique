@@ -44,6 +44,7 @@ export type Patient = {
 };
 
 export type MapCanvasData = {
+  schema_version?: 1 | 2;
   main_demand: string;
   current_context: string;
   emotional_history: string;
@@ -53,6 +54,48 @@ export type MapCanvasData = {
   internal_resources: string;
   reflective_hypotheses: string;
   next_steps: string;
+  structured_reading?: StructuredMapReading;
+};
+
+export type MapElementReading = {
+  id: string;
+  type: "pessoa" | "lugar" | "situacao";
+  label: string;
+  signal: "positivo" | "negativo" | "ambivalente" | "neutro";
+  quadrant: "emocional" | "espiritual" | "passado" | "presente_fisico" | "centro" | "fora";
+  distance_from_self: "proximo" | "medio" | "longe" | "fora";
+  is_outside_circle: boolean;
+  notes: string;
+  confidence: number;
+  x: number | null;
+  y: number | null;
+};
+
+export type MapArrowReading = {
+  arrow_type: "PS" | "PR" | "F";
+  quadrant: "emocional" | "espiritual" | "passado" | "presente_fisico" | "centro" | "fora";
+  size: "pequena" | "media" | "grande";
+  relation_to_self: string;
+  is_outside_circle: boolean;
+  notes: string;
+  confidence: number;
+  x: number | null;
+  y: number | null;
+};
+
+export type StructuredMapReading = {
+  summary: string;
+  self_position: { quadrant: string; position: string; notes: string; confidence: number; x: number | null; y: number | null };
+  quadrants: { emocional: string; espiritual: string; passado: string; presente_fisico: string };
+  elements: MapElementReading[];
+  arrows: MapArrowReading[];
+  absences: string[];
+  uncertainties: string[];
+  review: {
+    status: "pending" | "reviewed";
+    professional_notes: string;
+    reviewed_at: string | null;
+  };
 };
 
 export type MapDraft = {

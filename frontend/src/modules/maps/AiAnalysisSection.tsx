@@ -9,6 +9,7 @@ import type { AiAnalysis, AiInfographicSummary, AiProfessionalAnalysis } from ".
 type Props = {
   mapId: string;
   canvasHasContent: boolean;
+  readingReviewed: boolean;
   patientName?: string;
 };
 
@@ -60,7 +61,7 @@ function getText(pa: AiProfessionalAnalysis, key: string): string {
   return ((pa as Record<string, unknown>)[key] as string | undefined) ?? "";
 }
 
-export function AiAnalysisSection({ mapId, canvasHasContent, patientName }: Props) {
+export function AiAnalysisSection({ mapId, canvasHasContent, readingReviewed, patientName }: Props) {
   const [analysis, setAnalysis]             = useState<AiAnalysis | null>(null);
   const [loading, setLoading]               = useState(false);
   const [loadError, setLoadError]           = useState<string | null>(null);
@@ -156,10 +157,10 @@ export function AiAnalysisSection({ mapId, canvasHasContent, patientName }: Prop
           ) : null}
           <button
             className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={generating || !canvasHasContent}
+            disabled={generating || !canvasHasContent || !readingReviewed}
             onClick={() => void handleGenerate()}
             type="button"
-            title={!canvasHasContent ? "Preencha ao menos um campo do canvas antes de gerar a análise." : undefined}
+            title={!canvasHasContent ? "Preencha ao menos um campo do canvas antes de gerar a análise." : !readingReviewed ? "Revise, confirme e salve a leitura da imagem antes de gerar a análise." : undefined}
           >
             {generating ? "Gerando análise..." : hasAnalysis ? "Regenerar análise" : "Gerar análise com IA"}
           </button>
@@ -198,8 +199,10 @@ export function AiAnalysisSection({ mapId, canvasHasContent, patientName }: Prop
         <div className="mt-5 rounded-md border border-dashed border-slate-300 bg-white p-6 text-center">
           <p className="text-sm font-medium text-slate-700">Nenhuma análise gerada ainda.</p>
           <p className="mt-1 text-sm text-slate-500">
-            {canvasHasContent
+            {canvasHasContent && readingReviewed
               ? "Clique em \"Gerar análise com IA\" para criar o relatório clínico completo (17 seções)."
+              : canvasHasContent
+                ? "Revise, confirme e salve a leitura estruturada da imagem antes de gerar o relatório."
               : "Preencha ao menos um campo do canvas e salve antes de gerar a análise."}
           </p>
         </div>

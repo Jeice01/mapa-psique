@@ -9,9 +9,10 @@ final class AiPromptBuilder
     /**
      * Returns the system prompt that establishes the AI's role and output format.
      */
-    public static function systemPrompt(): string
+    /** @param array<string,mixed> $map */
+    public static function systemPrompt(array $map = []): string
     {
-        return <<<'PROMPT'
+        $prompt = <<<'PROMPT'
 Você é um psicanalista clínico especializado no Mapa da Psiquê, método do Instituto Âmago, baseado nas teorias de Freud e Jung.
 
 Analise o canvas preenchido e gere o relatório clínico completo com as 17 seções do protocolo. Responda SOMENTE com JSON válido, sem texto antes ou depois, seguindo exatamente esta estrutura:
@@ -55,6 +56,8 @@ DIRETRIZES OBRIGATÓRIAS:
 - patient_report em linguagem simples, acessível, esperançosa
 - Retorne APENAS JSON válido. Nenhum texto antes ou após o JSON
 PROMPT;
+
+        return $prompt . MethodologyContext::promptBlock($map !== [] ? $map : null);
     }
 
     /**
@@ -120,6 +123,18 @@ PROMPT;
         $lines[] = str_repeat('-', 50);
         $lines[] = 'Gere a análise completa conforme as instruções do sistema.';
 
+        $structuredReading = $canvas['structured_reading'] ?? null;
+        if (is_array($structuredReading)) {
+            $lines[] = '';
+            $lines[] = 'LEITURA ESTRUTURADA DO MAPA, REVISADA PELO PROFISSIONAL:';
+            $lines[] = (string) json_encode(
+                $structuredReading,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
+            );
+            $lines[] = '';
+            $lines[] = 'Fundamente cada seção nos elementos, quadrantes, posição do EU, setas, ausências e observações acima. Não invente dados ausentes.';
+        }
+
         return implode("\n", $lines);
     }
 
@@ -127,15 +142,39 @@ PROMPT;
 
     public static function canvasFillerSystemPrompt(): string
     {
-        return <<<'PROMPT'
+        $prompt = <<<'PROMPT'
 Você é um psicanalista clínico especializado no Mapa da Psiquê, método desenvolvido pelo Instituto Âmago, baseado nas teorias de Freud e Jung.
 
-Analise a imagem do mapa e as observações clínicas, identificando elementos simbólicos, padrões e dinâmicas psíquicas para preencher os 9 campos do canvas clínico.
+Sua tarefa nesta etapa é EXTRAIR o que está visível, separando observação de interpretação. Não produza diagnóstico. Quando algo estiver ilegível ou incerto, registre em uncertainties e reduza confidence.
 
-Responda SOMENTE com JSON válido usando as chaves: main_demand, current_context, emotional_history, recurring_patterns, core_beliefs, defense_strategies, internal_resources, reflective_hypotheses e next_steps.
+Retorne SOMENTE JSON válido com:
+{
+  "schema_version": 2,
+  "main_demand": "",
+  "current_context": "",
+  "emotional_history": "",
+  "recurring_patterns": "",
+  "core_beliefs": "",
+  "defense_strategies": "",
+  "internal_resources": "",
+  "reflective_hypotheses": "",
+  "next_steps": "",
+  "structured_reading": {
+    "summary": "descrição objetiva da composição visual",
+    "self_position": {"quadrant":"centro", "position":"descrição", "notes":"", "confidence":0.0, "x":0.5, "y":0.5},
+    "quadrants": {"emocional":"", "espiritual":"", "passado":"", "presente_fisico":""},
+    "elements": [{"id":"item-1", "type":"pessoa|lugar|situacao", "label":"", "signal":"positivo|negativo|ambivalente|neutro", "quadrant":"emocional|espiritual|passado|presente_fisico|centro|fora", "distance_from_self":"proximo|medio|longe|fora", "is_outside_circle":false, "notes":"", "confidence":0.0, "x":0.0, "y":0.0}],
+    "arrows": [{"arrow_type":"PS|PR|F", "quadrant":"emocional|espiritual|passado|presente_fisico|centro|fora", "size":"pequena|media|grande", "relation_to_self":"", "is_outside_circle":false, "notes":"", "confidence":0.0, "x":0.0, "y":0.0}],
+    "absences": [],
+    "uncertainties": [],
+    "review": {"status":"pending", "professional_notes":"", "reviewed_at":null}
+  }
+}
 
-Use linguagem interpretativa e não determinista. Considere ausências, os quatro quadrantes, as setas PS/PR/F e a posição do EU. Escreva em português do Brasil.
+Os nove campos clínicos devem ser preenchidos apenas quando houver base visível ou observação fornecida. A leitura estruturada sempre deve permanecer pending até revisão humana. Escreva em português do Brasil.
 PROMPT;
+
+        return $prompt . MethodologyContext::promptBlock();
     }
 
     public static function canvasFillerUserPrompt(

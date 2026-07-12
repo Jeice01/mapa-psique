@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use App\Http\JsonResponse;
 use App\Modules\Auth\RoleMiddleware;
+use App\Modules\AiAnalysis\AiPromptBuilder;
+use App\Modules\AiAnalysis\MethodologyContext;
+use App\Modules\AiAnalysis\KnowledgeRetriever;
+use App\Modules\AiAnalysis\StructuredReading;
 use App\Security\Csrf;
 use App\Security\InputSanitizer;
 use App\Security\PasswordHasher;
@@ -150,6 +154,89 @@ test('map repository queries preserve owner isolation', static function (): void
     assertTrue(is_string($source));
     assertTrue(substr_count($source, 'owner_user_id = :owner_user_id') >= 5);
     assertTrue(str_contains($source, "'owner_user_id' => \$ownerUserId"));
+});
+
+test('vision extraction always requires human review', static function (): void {
+    $reading = StructuredReading::normalizeExtraction([
+        'summary' => '  leitura inicial  ',
+        'elements' => [['type' => 'desconhecido', 'label' => ' Item ', 'confidence' => 2, 'x' => -1]],
+        'review' => ['status' => 'reviewed', 'professional_notes' => ' conferir seta '],
+    ]);
+
+    assertSame('leitura inicial', $reading['summary']);
+    assertSame('pending', $reading['review']['status']);
+    assertSame('conferir seta', $reading['review']['professional_notes']);
+    assertSame('situacao', $reading['elements'][0]['type']);
+    assertSame(1.0, $reading['elements'][0]['confidence']);
+    assertSame(0.0, $reading['elements'][0]['x']);
+    assertSame(3, count($reading['arrows']));
+    assertTrue(!StructuredReading::isReviewed($reading));
+});
+
+test('reviewed structured reading is accepted by the review contract', static function (): void {
+    assertTrue(StructuredReading::isReviewed(['review' => ['status' => 'reviewed']]));
+    assertTrue(!StructuredReading::isReviewed(['review' => ['status' => 'pending']]));
+});
+
+test('analysis prompt includes the reviewed structured map', static function (): void {
+    $prompt = AiPromptBuilder::userPrompt([
+        'patient_name' => 'Paciente teste',
+        'canvas_json' => [
+            'main_demand' => 'Teste',
+            'structured_reading' => [
+                'summary' => 'Setas revisadas',
+                'review' => ['status' => 'reviewed', 'professional_notes' => 'Validado'],
+            ],
+        ],
+    ]);
+
+    assertTrue(str_contains($prompt, 'LEITURA ESTRUTURADA DO MAPA'));
+    assertTrue(str_contains($prompt, 'Setas revisadas'));
+    assertTrue(str_contains($prompt, 'Não invente dados ausentes'));
+});
+
+test('methodology context is versioned and available to both AI stages', static function (): void {
+    $context = MethodologyContext::load();
+    assertTrue(str_contains($context, MethodologyContext::VERSION));
+    assertTrue(str_contains($context, 'A revisão humana da leitura visual é obrigatória'));
+    assertTrue(str_contains(AiPromptBuilder::systemPrompt(), '<metodologia'));
+    assertTrue(str_contains(AiPromptBuilder::canvasFillerSystemPrompt(), '<metodologia'));
+});
+
+test('methodology context enforces evidence and uncertainty boundaries', static function (): void {
+    $context = MethodologyContext::load();
+    assertTrue(str_contains($context, 'não diagnóstico conclusivo'));
+    assertTrue(str_contains($context, 'Não inventar conteúdo ilegível'));
+    assertTrue(str_contains($context, 'Alternativa/limite'));
+    assertTrue(str_contains($context, 'Pergunta de confirmação'));
+});
+
+test('knowledge retrieval selects traceable excerpts for reviewed map data', static function (): void {
+    $map = [
+        'canvas_json' => [
+            'structured_reading' => [
+                'quadrants' => ['emocional' => 'mãe e dependência afetiva'],
+                'arrows' => [['arrow_type' => 'F', 'quadrant' => 'emocional', 'notes' => 'seta grande']],
+                'review' => ['professional_notes' => 'Investigar complexo materno sem determinismo'],
+            ],
+        ],
+    ];
+    $excerpts = KnowledgeRetriever::relevantExcerpts($map);
+    assertTrue(str_contains($excerpts, 'Fonte: material-didatico-2026'));
+    assertTrue(str_contains($excerpts, 'seta'));
+
+    $prompt = AiPromptBuilder::systemPrompt($map);
+    assertTrue(str_contains($prompt, '<fontes_relevantes>'));
+    assertTrue(str_contains($prompt, 'não podem ser copiados como conclusão'));
+});
+
+test('knowledge source manifest preserves source roles and fingerprints', static function (): void {
+    $manifestPath = dirname(__DIR__) . '/resources/knowledge/sources.json';
+    $manifest = json_decode((string) file_get_contents($manifestPath), true);
+    assertTrue(is_array($manifest));
+    assertSame(3, count($manifest['sources'] ?? []));
+    assertSame('normative', $manifest['sources'][0]['role'] ?? null);
+    assertSame(64, strlen((string) ($manifest['sources'][0]['sha256'] ?? '')));
 });
 
 $failures = [];

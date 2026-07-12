@@ -1,0 +1,26 @@
+{
+  "version": "2026-07-11",
+  "sources": [
+    {
+      "id": "protocolo-oficial-v1",
+      "file": "sources/protocolo-original.pdf",
+      "sha256": "3D7F05CD1E78E56549CCE84C728F65BF5991A08D0DAB640DB2FB8FDE46D41889",
+      "role": "normative",
+      "runtime_representation": "mapa-psique-protocolo-v1.md"
+    },
+    {
+      "id": "material-didatico-2026",
+      "file": "sources/material-didatico-2026.md",
+      "sha256": "B81F3B135F7EDC850C6A190CAF6833FAF8F6271DEC4C9F3C8911027608458F7D",
+      "role": "reference_and_examples",
+      "runtime_representation": "direct_chunk_retrieval"
+    },
+    {
+      "id": "pdf-slide-mapa",
+      "file": "sources/pdf-slide-mapa.md",
+      "sha256": "1498C1521ED1CCF51FCC16A99B7E0D629E41CFD439E9BDDBBCC68B2BD90324A9",
+      "role": "visual_index_only",
+      "runtime_representation": "not_retrieved_due_to_insufficient_text"
+    }
+  ]
+}
