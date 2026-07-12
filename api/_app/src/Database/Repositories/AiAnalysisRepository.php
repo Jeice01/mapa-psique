@@ -50,6 +50,45 @@ final class AiAnalysisRepository
         }
     }
 
+    public function requeueStaleProcessing(int $minutes = 10): int
+    {
+        $minutes = max(1, $minutes);
+        $stmt = $this->pdo->prepare(
+            "UPDATE map_ai_analyses
+             SET status = 'pending',
+                 error_message = 'Processamento anterior interrompido; reenfileirado automaticamente.'
+             WHERE status = 'processing'
+               AND updated_at < DATE_SUB(NOW(), INTERVAL {$minutes} MINUTE)"
+        );
+        $stmt->execute();
+
+        return $stmt->rowCount();
+    }
+
+    /** @param array<string,mixed> $data */
+    public function updateImageResult(string $mapId, array $data): void
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE map_ai_analyses
+             SET image_path = :image_path,
+                 model_image = :model_image
+             WHERE map_id = :map_id'
+        );
+        $stmt->execute([
+            'map_id'     => $mapId,
+            'image_path' => $data['image_path'] ?? null,
+            'model_image'=> $data['model_image'] ?? null,
+        ]);
+    }
+
+    public function markImageFailed(string $mapId): void
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE map_ai_analyses SET model_image = 'failed' WHERE map_id = :map_id"
+        );
+        $stmt->execute(['map_id' => $mapId]);
+    }
+
     /**
      * @param array<string,mixed> $data
      */
