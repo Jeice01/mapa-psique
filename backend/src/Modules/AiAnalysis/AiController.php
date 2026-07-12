@@ -77,10 +77,11 @@ final class AiController
         } catch (InvalidArgumentException $exception) {
             return JsonResponse::error($exception->getMessage(), 400);
         } catch (RuntimeException $runtimeEx) {
-            return JsonResponse::error(
-                'Erro: ' . $runtimeEx->getMessage(),
-                503
-            );
+            $prev = $runtimeEx->getPrevious();
+            $detail = $prev
+                ? get_class($prev) . ': ' . $prev->getMessage()
+                : $runtimeEx->getMessage();
+            return JsonResponse::error('Erro: ' . $detail, 503);
         } catch (Throwable) {
             return JsonResponse::error('Erro interno ao gerar a análise.', 500);
         }
