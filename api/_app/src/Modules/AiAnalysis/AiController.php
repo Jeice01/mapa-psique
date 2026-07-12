@@ -69,7 +69,12 @@ final class AiController
         }
 
         // Enqueue — cron worker processes asynchronously
-        (new AiAnalysisRepository())->upsert($id, ['status' => 'pending']);
+        try {
+            (new AiAnalysisRepository())->upsert($id, ['status' => 'pending']);
+        } catch (Throwable $exception) {
+            error_log('ai_analysis_enqueue_failed map=' . $id . ' message=' . $exception->getMessage());
+            return JsonResponse::error('Não foi possível enfileirar a análise. Tente novamente.', 500);
+        }
 
         return JsonResponse::ok([
             'success' => true,
