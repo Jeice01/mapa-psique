@@ -78,7 +78,7 @@ final class AiController
             return JsonResponse::error($exception->getMessage(), 400);
         } catch (RuntimeException) {
             return JsonResponse::error(
-                'Não foi possível gerar a análise agora. Verifique a configuração da IA no servidor.',
+                'Não foi possível gerar a análise agora. A falha foi registrada para diagnóstico; tente novamente em instantes.',
                 503
             );
         } catch (Throwable) {

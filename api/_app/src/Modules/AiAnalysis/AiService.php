@@ -79,10 +79,11 @@ final class AiService
             );
         }
 
-        // Mark as processing
-        $this->repository->upsert($mapId, ['status' => 'processing']);
-
         try {
+            // Mark as processing inside the guarded block so persistence errors
+            // cannot escape as an opaque HTTP 500.
+            $this->repository->upsert($mapId, ['status' => 'processing']);
+
             // ── Text generation ───────────────────────────────────────────────
             $systemPrompt = AiPromptBuilder::systemPrompt($map);
             $userPrompt   = AiPromptBuilder::userPrompt($map);
@@ -154,13 +155,33 @@ final class AiService
             ]);
 
         } catch (Throwable $exception) {
-            $this->repository->upsert($mapId, [
-                'status'        => 'failed',
-                'error_message' => $exception->getMessage(),
-                'generated_at'  => null,
-            ]);
+            error_log(sprintf(
+                'ai_analysis_generation_failed map=%s type=%s message=%s',
+                $mapId,
+                $exception::class,
+                $exception->getMessage()
+            ));
 
-            throw $exception;
+            try {
+                $this->repository->upsert($mapId, [
+                    'status'        => 'failed',
+                    'error_message' => $exception->getMessage(),
+                    'generated_at'  => null,
+                ]);
+            } catch (Throwable $persistenceException) {
+                error_log(sprintf(
+                    'ai_analysis_failure_persistence_failed map=%s type=%s message=%s',
+                    $mapId,
+                    $persistenceException::class,
+                    $persistenceException->getMessage()
+                ));
+            }
+
+            if ($exception instanceof InvalidArgumentException || $exception instanceof RuntimeException) {
+                throw $exception;
+            }
+
+            throw new RuntimeException('Falha inesperada durante a geração da análise.', 0, $exception);
         }
 
         return $this->findAnalysis($mapId, $ownerUserId) ?? [];
