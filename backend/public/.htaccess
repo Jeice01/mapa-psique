@@ -1,3 +1,12 @@
+# PHP timeout para chamadas de IA
+<IfModule mod_php.c>
+    php_value max_execution_time 300
+    php_value max_input_time 300
+</IfModule>
+<IfModule mod_fcgid.c>
+    FcgidIOTimeout 300
+</IfModule>
+
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

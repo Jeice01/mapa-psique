@@ -15,7 +15,7 @@ final class AnthropicClient
     public function __construct()
     {
         $this->apiKey = (string) (Env::get('ANTHROPIC_API_KEY') ?? '');
-        $this->model  = (string) (Env::get('ANTHROPIC_TEXT_MODEL') ?? 'claude-opus-4-8');
+        $this->model  = (string) (Env::get('ANTHROPIC_TEXT_MODEL') ?? 'claude-haiku-4-5-20251001');
     }
 
     public function isAvailable(): bool
