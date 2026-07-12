@@ -25,7 +25,8 @@ final class AiAnalysisRepository
         $stmt = $this->pdo->prepare(
             'SELECT id, map_id, professional_analysis, patient_report,
                     image_path, image_prompt, model_text, model_image,
-                    status, error_message, generated_at, created_at, updated_at
+                    status, error_message, therapist_notes,
+                    generated_at, created_at, updated_at
              FROM map_ai_analyses
              WHERE map_id = :map_id
              LIMIT 1'
@@ -87,6 +88,23 @@ final class AiAnalysisRepository
             "UPDATE map_ai_analyses SET model_image = 'failed' WHERE map_id = :map_id"
         );
         $stmt->execute(['map_id' => $mapId]);
+    }
+
+    /**
+     * Salva as observações clínicas do terapeuta sem alterar status nem análise.
+     * Preservada entre gerações — a IA incorpora nas próximas rodadas.
+     */
+    public function saveNotes(string $mapId, string $notes): void
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE map_ai_analyses
+             SET therapist_notes = :therapist_notes
+             WHERE map_id = :map_id'
+        );
+        $stmt->execute([
+            'map_id'          => $mapId,
+            'therapist_notes' => $notes !== '' ? $notes : null,
+        ]);
     }
 
     /**

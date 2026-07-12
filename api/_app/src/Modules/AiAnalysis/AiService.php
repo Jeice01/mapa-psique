@@ -105,6 +105,17 @@ final class AiService
             );
         }
 
+        // Captura notas do terapeuta e análise anterior ANTES do upsert (que sobrescreve).
+        $existing        = $this->repository->findByMapId($mapId);
+        $therapistNotes  = isset($existing['therapist_notes']) && $existing['therapist_notes'] !== ''
+            ? (string) $existing['therapist_notes']
+            : null;
+        $previousAnalysis = ($existing !== null
+            && $existing['status'] === 'completed'
+            && $existing['professional_analysis'] !== null)
+            ? (string) $existing['professional_analysis']
+            : null;
+
         try {
             // Mark as processing inside the guarded block so persistence errors
             // cannot escape as an opaque HTTP 500.
@@ -112,7 +123,7 @@ final class AiService
 
             // ── Text generation ───────────────────────────────────────────────
             $systemPrompt = AiPromptBuilder::systemPrompt($map);
-            $userPrompt   = AiPromptBuilder::userPrompt($map);
+            $userPrompt   = AiPromptBuilder::userPrompt($map, $therapistNotes, $previousAnalysis);
             $textResponse = null;
             $modelText    = null;
             $openAiFailure = null;

@@ -62,10 +62,16 @@ PROMPT;
 
     /**
      * Builds the user-facing prompt with all canvas data filled in.
+     * When $therapistNotes or $previousAnalysis are provided, the AI generates
+     * a refined analysis incorporating clinical feedback.
      *
      * @param array<string,mixed> $map
      */
-    public static function userPrompt(array $map): string
+    public static function userPrompt(
+        array $map,
+        ?string $therapistNotes = null,
+        ?string $previousAnalysis = null
+    ): string
     {
         $patientName = trim((string) ($map['patient_name'] ?? ''));
         $title       = trim((string) ($map['title'] ?? ''));
@@ -121,7 +127,6 @@ PROMPT;
 
         $lines[] = '';
         $lines[] = str_repeat('-', 50);
-        $lines[] = 'Gere a análise completa conforme as instruções do sistema.';
 
         $structuredReading = $canvas['structured_reading'] ?? null;
         if (is_array($structuredReading)) {
@@ -133,6 +138,46 @@ PROMPT;
             );
             $lines[] = '';
             $lines[] = 'Fundamente cada seção nos elementos, quadrantes, posição do EU, setas, ausências e observações acima. Não invente dados ausentes.';
+        }
+
+        // ── Refinamento: inclui notas do terapeuta e análise anterior quando presentes ──
+        if ($therapistNotes !== null || $previousAnalysis !== null) {
+            $lines[] = '';
+            $lines[] = str_repeat('=', 60);
+            $lines[] = 'MODO DE REFINAMENTO CLÍNICO';
+            $lines[] = str_repeat('=', 60);
+            $lines[] = 'O terapeuta revisou a análise anterior e forneceu observações.';
+            $lines[] = 'Incorpore o olhar clínico humano e produza uma versão aprimorada e mais precisa.';
+
+            if ($therapistNotes !== null) {
+                $lines[] = '';
+                $lines[] = 'OBSERVAÇÕES CLÍNICAS DO TERAPEUTA:';
+                $lines[] = str_repeat('-', 40);
+                $lines[] = $therapistNotes;
+                $lines[] = str_repeat('-', 40);
+            }
+
+            if ($previousAnalysis !== null) {
+                $decoded = json_decode($previousAnalysis, true);
+                if (is_array($decoded)) {
+                    $lines[] = '';
+                    $lines[] = 'ANÁLISE ANTERIOR GERADA PELA IA (use como base para refinamento):';
+                    $lines[] = str_repeat('-', 40);
+                    // Inclui apenas o resumo para não estourar o contexto
+                    foreach (['visao_panoramica', 'sintese_clinica_final', 'diagnostico_equilibrio'] as $k) {
+                        if (!empty($decoded[$k])) {
+                            $lines[] = "• {$k}: " . mb_substr((string) $decoded[$k], 0, 300);
+                        }
+                    }
+                    $lines[] = str_repeat('-', 40);
+                }
+            }
+
+            $lines[] = '';
+            $lines[] = 'Gere a análise refinada mantendo o formato JSON exato das instruções do sistema.';
+        } else {
+            $lines[] = '';
+            $lines[] = 'Gere a análise completa conforme as instruções do sistema.';
         }
 
         return implode("\n", $lines);

@@ -9,6 +9,7 @@ use App\Http\BinaryResponse;
 use App\Http\JsonResponse;
 use App\Http\ResponseInterface;
 use App\Modules\Shared\AccessGuard;
+use App\Modules\Shared\Request;
 use App\Security\Csrf;
 use InvalidArgumentException;
 use Throwable;
@@ -74,6 +75,47 @@ final class AiController
             'success' => true,
             'message' => 'Análise enfileirada.',
             'data'    => ['status' => 'pending'],
+        ]);
+    }
+
+    /**
+     * PUT /api/maps/{id}/analysis/notes
+     * Saves therapist observations without re-running the AI.
+     * Notes are incorporated in the next generation cycle.
+     */
+    public function saveNotes(string $id): JsonResponse
+    {
+        $session = AccessGuard::require(['profissional']);
+
+        if ($session instanceof JsonResponse) {
+            return $session;
+        }
+
+        if (!Csrf::validate(Csrf::tokenFromRequest())) {
+            return JsonResponse::error('Invalid CSRF token', 419);
+        }
+
+        try {
+            // Verifies map ownership
+            (new AiService())->findAnalysis($id, $session['user_id']);
+        } catch (InvalidArgumentException) {
+            return JsonResponse::error('Mapa não encontrado.', 404);
+        } catch (Throwable) {
+            return JsonResponse::error('Erro ao verificar o mapa.', 500);
+        }
+
+        $body  = Request::json();
+        $notes = isset($body['notes']) ? trim((string) $body['notes']) : '';
+
+        if (mb_strlen($notes) > 5000) {
+            return JsonResponse::error('As observações não podem ultrapassar 5000 caracteres.', 422);
+        }
+
+        (new AiAnalysisRepository())->saveNotes($id, $notes);
+
+        return JsonResponse::ok([
+            'success' => true,
+            'message' => 'Observações salvas com sucesso.',
         ]);
     }
 
