@@ -5,15 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\AiAnalysis;
 
 use App\Database\Repositories\AiAnalysisRepository;
-use App\Http\BackgroundJobResponse;
 use App\Http\BinaryResponse;
 use App\Http\JsonResponse;
 use App\Http\ResponseInterface;
 use App\Modules\Shared\AccessGuard;
-use App\Modules\Shared\Audit;
 use App\Security\Csrf;
 use InvalidArgumentException;
-use RuntimeException;
 use Throwable;
 
 final class AiController
@@ -46,8 +43,8 @@ final class AiController
 
     /**
      * POST /api/maps/{id}/analysis
-     * Validates synchronously, marks as processing, then generates in background
-     * via fastcgi_finish_request() to bypass nginx 60 s gateway timeout.
+     * Validates synchronously, enqueues the analysis, and returns immediately.
+     * A cron worker (bin/worker.php) picks up 'queued' items and calls AiService::generate().
      */
     public function generate(string $id): ResponseInterface
     {
@@ -70,31 +67,14 @@ final class AiController
             return JsonResponse::error('Erro ao validar o mapa.', 500);
         }
 
-        // Mark as processing so frontend can start polling
-        (new AiAnalysisRepository())->upsert($id, ['status' => 'processing']);
+        // Enqueue — cron worker processes asynchronously
+        (new AiAnalysisRepository())->upsert($id, ['status' => 'queued']);
 
-        $userId = $session['user_id'];
-        $mapId  = $id;
-
-        $body = (string) json_encode(
-            ['success' => true, 'message' => 'Análise iniciada.', 'data' => ['status' => 'processing']],
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-        );
-
-        return new BackgroundJobResponse($body, 200, function () use ($mapId, $userId): void {
-            try {
-                $analysis = (new AiService())->generate($mapId, $userId);
-                Audit::record(
-                    'map.ai_analysis_generated',
-                    $userId,
-                    'maps',
-                    $mapId,
-                    ['status_code' => 200, 'model_text' => $analysis['model_text'] ?? null]
-                );
-            } catch (Throwable) {
-                // AiService already persists status = 'failed' in DB
-            }
-        });
+        return JsonResponse::ok([
+            'success' => true,
+            'message' => 'Análise enfileirada.',
+            'data'    => ['status' => 'queued'],
+        ]);
     }
 
     /**
