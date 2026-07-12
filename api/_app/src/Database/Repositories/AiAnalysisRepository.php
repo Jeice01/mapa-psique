@@ -64,7 +64,7 @@ final class AiAnalysisRepository
                  :model_text, :model_image, :status, :error_message, :generated_at)'
         );
         $stmt->execute([
-            'id'                    => Uuid::generate(),
+            'id'                    => Uuid::v4(),
             'map_id'                => $mapId,
             'professional_analysis' => $data['professional_analysis'] ?? null,
             'patient_report'        => $data['patient_report'] ?? null,
