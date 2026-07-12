@@ -47,7 +47,7 @@ final class OpenAiClient
                 ['role' => 'system', 'content' => $systemPrompt],
                 ['role' => 'user',   'content' => $userMessage],
             ],
-            'max_tokens'  => 4096,
+            'max_tokens'  => 8000,
             'temperature' => 0.7,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
@@ -104,7 +104,7 @@ final class OpenAiClient
                     ],
                 ],
             ],
-            'max_tokens'  => 4096,
+            'max_tokens'  => 8000,
             'temperature' => 0.7,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
