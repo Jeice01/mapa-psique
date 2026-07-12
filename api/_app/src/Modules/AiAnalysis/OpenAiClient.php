@@ -16,7 +16,7 @@ final class OpenAiClient
     public function __construct()
     {
         $this->apiKey     = (string) (Env::get('OPENAI_API_KEY') ?? '');
-        $this->textModel  = (string) (Env::get('OPENAI_TEXT_MODEL') ?? 'gpt-4o');
+        $this->textModel  = (string) (Env::get('OPENAI_TEXT_MODEL') ?? 'gpt-4o-mini');
         $this->imageModel = (string) (Env::get('OPENAI_IMAGE_MODEL') ?? 'dall-e-3');
     }
 
